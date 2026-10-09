@@ -60,8 +60,8 @@ export function LiveMarket() {
           fetch(`${REST}/klines?symbol=BTCUSDT&interval=1m&limit=120`).then((r) => r.json()),
           fetch(`${REST}/ticker/24hr?symbol=BTCUSDT`).then((r) => r.json()),
         ]);
-        d.bids.forEach(([p, q]: string[]) => s.bids.set(+p, +q));
-        d.asks.forEach(([p, q]: string[]) => s.asks.set(+p, +q));
+        d.bids.forEach(([p, q]: [string, string]) => s.bids.set(+p, +q));
+        d.asks.forEach(([p, q]: [string, string]) => s.asks.set(+p, +q));
         s.candles = k.map((x: (string | number)[]) => ({ t: +x[0], o: +x[1], h: +x[2], l: +x[3], c: +x[4], v: +x[5], tb: +x[9] }));
         setChange(+t.priceChangePercent);
         s.cur.last = s.candles[s.candles.length - 1]?.c ?? 0;
@@ -76,8 +76,8 @@ export function LiveMarket() {
       ws.onmessage = (ev) => {
         const { stream, data } = JSON.parse(ev.data);
         if (stream.endsWith("depth@100ms")) {
-          data.b.forEach(([p, q]: string[]) => (+q === 0 ? s.bids.delete(+p) : s.bids.set(+p, +q)));
-          data.a.forEach(([p, q]: string[]) => (+q === 0 ? s.asks.delete(+p) : s.asks.set(+p, +q)));
+          data.b.forEach(([p, q]: [string, string]) => (+q === 0 ? s.bids.delete(+p) : s.bids.set(+p, +q)));
+          data.a.forEach(([p, q]: [string, string]) => (+q === 0 ? s.asks.delete(+p) : s.asks.set(+p, +q)));
         } else if (stream.endsWith("aggTrade")) {
           const p = +data.p, q = +data.q;
           if (data.m) s.cur.sell += q; else s.cur.buy += q;

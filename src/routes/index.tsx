@@ -24,7 +24,7 @@ export const Route = createFileRoute("/")({
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(newsQuery).catch(() => []),
   component: Index,
-  errorComponent: ({ error }) => <div role="alert" className="p-6 text-bear">{error.message}</div>,
+  errorComponent: ({ error }) => <div role="alert" className="p-6 text-bear">{(error as Error).message}</div>,
   notFoundComponent: () => <div className="p-6">Not found</div>,
 });
 
