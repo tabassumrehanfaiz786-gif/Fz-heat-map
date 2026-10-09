@@ -14,7 +14,7 @@ const STOPS: [number, number, number][] = [
 function heat(v: number): [number, number, number] {
   const x = Math.max(0, Math.min(1, v)) * (STOPS.length - 1);
   const i = Math.floor(x), f = x - i;
-  const a = STOPS[i], b = STOPS[Math.min(i + 1, STOPS.length - 1)];
+  const a = STOPS[i]!, b = STOPS[Math.min(i + 1, STOPS.length - 1)]!;
   return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
 }
 

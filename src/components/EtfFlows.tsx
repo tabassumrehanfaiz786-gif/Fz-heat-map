@@ -9,7 +9,7 @@ const ETFS = [
 ];
 
 export function EtfFlows() {
-  const totals = ETFS.map((e) => ({ ...e, today: e.f[e.f.length - 1], week: e.f.reduce((a, b) => a + b, 0) }));
+  const totals = ETFS.map((e) => ({ ...e, today: e.f[e.f.length - 1] ?? 0, week: e.f.reduce((a, b) => a + b, 0) }));
   const net = totals.reduce((a, e) => a + e.today, 0);
   const max = Math.max(...totals.map((e) => Math.abs(e.week)));
   return (

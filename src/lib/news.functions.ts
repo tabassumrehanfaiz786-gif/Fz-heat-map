@@ -21,7 +21,7 @@ function score(text: string): NewsItem["sentiment"] {
 }
 
 function decode(s: string) {
-  return s.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&amp;/g, "&").replace(/&#039;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
+  return s.replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&amp;/g, "&").replace(/&#039;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
 }
 
 async function fromRss(url: string, source: string): Promise<NewsItem[]> {
