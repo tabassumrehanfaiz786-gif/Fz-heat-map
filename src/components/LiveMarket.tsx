@@ -26,7 +26,7 @@ function useCanvasSize(ref: React.RefObject<HTMLCanvasElement | null>) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const ro = new ResizeObserver(([e]) => setS({ w: e.contentRect.width, h: e.contentRect.height }));
+    const ro = new ResizeObserver((es) => { const e = es[0]; if (e) setS({ w: e.contentRect.width, h: e.contentRect.height }); });
     ro.observe(el);
     return () => ro.disconnect();
   }, [ref]);
@@ -62,7 +62,7 @@ export function LiveMarket() {
         ]);
         d.bids.forEach(([p, q]: [string, string]) => s.bids.set(+p, +q));
         d.asks.forEach(([p, q]: [string, string]) => s.asks.set(+p, +q));
-        s.candles = k.map((x: (string | number)[]) => ({ t: +x[0], o: +x[1], h: +x[2], l: +x[3], c: +x[4], v: +x[5], tb: +x[9] }));
+        s.candles = k.map((x: any[]) => ({ t: +x[0], o: +x[1], h: +x[2], l: +x[3], c: +x[4], v: +x[5], tb: +x[9] }));
         setChange(+t.priceChangePercent);
         s.cur.last = s.candles[s.candles.length - 1]?.c ?? 0;
         setPrice(s.cur.last);
