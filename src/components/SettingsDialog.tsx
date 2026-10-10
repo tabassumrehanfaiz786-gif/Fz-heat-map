@@ -1,0 +1,86 @@
+import { useQuery } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { setSettings, useSettings, type EtfProvider } from "@/lib/settings";
+import { getEtfFlows } from "@/lib/etf.functions";
+
+const PROVIDERS: { id: EtfProvider; name: string; secret: string; where: string }[] = [
+  { id: "coinglass", name: "CoinGlass", secret: "COINGLASS_API_KEY", where: "coinglass.com → API → your plan's API key" },
+  { id: "sosovalue", name: "SoSoValue", secret: "SOSOVALUE_API_KEY", where: "sosovalue.com → Developer → API key" },
+];
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-1.5">
+      <Label className="text-sm text-foreground">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const s = useSettings();
+  const status = useQuery({ queryKey: ["etf", s.etfProvider], queryFn: () => getEtfFlows({ data: { provider: s.etfProvider } }), enabled: open });
+  const p = PROVIDERS.find((x) => x.id === s.etfProvider)!;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-display">Fz Heatmap settings</DialogTitle>
+          <DialogDescription>Data providers, big-order alerts and wall detection.</DialogDescription>
+        </DialogHeader>
+
+        <section className="space-y-2">
+          <h3 className="font-mono text-xs uppercase tracking-widest text-muted-foreground">ETF flow data provider</h3>
+          <div className="flex gap-2">
+            {PROVIDERS.map((x) => (
+              <button key={x.id} className={`btn-chip ${s.etfProvider === x.id ? "btn-chip-active" : ""}`} onClick={() => setSettings({ etfProvider: x.id })}>{x.name}</button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Status:{" "}
+            {status.isLoading ? "checking…" : status.data?.configured ? (
+              status.data.error ? <span className="text-bear">{status.data.error}</span> : <span className="text-bull">connected</span>
+            ) : (
+              <span className="text-bear">API key not added yet</span>
+            )}
+          </p>
+          <p className="text-xs text-muted-foreground">Get your key at {p.where}. Your key is stored securely on the server, never in the browser — ask in chat to add it.</p>
+        </section>
+
+        <section className="space-y-1 border-t border-border pt-3">
+          <h3 className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Big bubble alerts</h3>
+          <Row label="Alerts on"><Switch checked={s.alertsOn} onCheckedChange={(v) => setSettings({ alertsOn: v })} /></Row>
+          <Row label="Large buys"><Switch checked={s.alertBuy} onCheckedChange={(v) => setSettings({ alertBuy: v })} /></Row>
+          <Row label="Large sells"><Switch checked={s.alertSell} onCheckedChange={(v) => setSettings({ alertSell: v })} /></Row>
+          <Row label="Minimum size (BTC per second)">
+            <Input type="number" min={0.5} step={0.5} className="w-24" value={s.alertMinBtc} onChange={(e) => setSettings({ alertMinBtc: Math.max(0.5, Number(e.target.value) || 0.5) })} />
+          </Row>
+          <Row label="Sound"><Switch checked={s.alertSound} onCheckedChange={(v) => setSettings({ alertSound: v })} /></Row>
+          <Row label="Desktop notifications">
+            <Switch
+              checked={s.alertNotify}
+              onCheckedChange={async (v) => {
+                if (v && "Notification" in window && Notification.permission !== "granted") {
+                  const r = await Notification.requestPermission();
+                  if (r !== "granted") return;
+                }
+                setSettings({ alertNotify: v });
+              }}
+            />
+          </Row>
+        </section>
+
+        <section className="space-y-1 border-t border-border pt-3">
+          <h3 className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Passive order walls</h3>
+          <Row label="Show red line when a resting order is at least (BTC)">
+            <Input type="number" min={1} step={5} className="w-24" value={s.wallMinBtc} onChange={(e) => setSettings({ wallMinBtc: Math.max(1, Number(e.target.value) || 1) })} />
+          </Row>
+        </section>
+      </DialogContent>
+    </Dialog>
+  );
+}
