@@ -30,7 +30,7 @@ export const analyzeHeadlines = createServerFn({ method: "POST" })
     return { titles: input.titles.slice(0, 20).map((t) => String(t).slice(0, 300)) };
   })
   .handler(async ({ data }) => {
-    const key = process.env.LOVABLE_API_KEY;
+    const key = process.env['LOVABLE_API_KEY'];
     if (!key) throw new Error("AI is not configured");
     const list = data.titles.map((t, i) => `${i}. ${t}`).join("\n");
     const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {

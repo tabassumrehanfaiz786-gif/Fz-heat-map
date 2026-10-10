@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 export type EtfRow = { ticker: string; issuer: string; today: number; week: number };
-export type EtfResult = { configured: boolean; provider: string; rows: EtfRow[]; date?: string; error?: string };
+export type EtfResult = { configured: boolean; provider: string; rows: EtfRow[]; date?: string | undefined; error?: string | undefined };
 
 const ISSUERS: Record<string, string> = {
   IBIT: "BlackRock", FBTC: "Fidelity", GBTC: "Grayscale", BTC: "Grayscale Mini", ARKB: "ARK 21Shares",
@@ -52,10 +52,10 @@ export const getEtfFlows = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<EtfResult> => {
     try {
       if (data.provider === "sosovalue") {
-        const k = process.env.SOSOVALUE_API_KEY;
+        const k = process.env['SOSOVALUE_API_KEY'];
         return k ? await sosovalue(k) : { configured: false, provider: "SoSoValue", rows: [] };
       }
-      const k = process.env.COINGLASS_API_KEY;
+      const k = process.env['COINGLASS_API_KEY'];
       return k ? await coinglass(k) : { configured: false, provider: "CoinGlass", rows: [] };
     } catch (e) {
       return { configured: true, provider: data.provider, rows: [], error: e instanceof Error ? e.message : "Failed" };
