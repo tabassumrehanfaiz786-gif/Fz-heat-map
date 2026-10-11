@@ -63,7 +63,7 @@ export const getEtfFlows = createServerFn({ method: "GET" })
   });
 
 export type EtfDay = { date: string; total: number; flows: Record<string, number> };
-export type EtfHistory = { configured: boolean; provider: string; days: EtfDay[]; error?: string | undefined };
+export type EtfHistory = { configured: boolean; provider: string; days: EtfDay[]; error?: string | undefined; fetchedAt?: number | undefined };
 
 export const getEtfHistory = createServerFn({ method: "GET" })
   .inputValidator((input: { provider: string }) => ({ provider: input?.provider === "sosovalue" ? "sosovalue" : "coinglass" }))
@@ -79,7 +79,7 @@ export const getEtfHistory = createServerFn({ method: "GET" })
         if (!res.ok) return { configured: true, provider: "SoSoValue", days: [], error: `SoSoValue error [${res.status}]: ${body.slice(0, 200)}` };
         const list: { date: string; totalNetInflow?: number | string }[] = JSON.parse(body).data ?? [];
         const days = list.map((d) => ({ date: d.date, total: Number(d.totalNetInflow ?? 0) / 1e6, flows: {} })).sort((a, b) => a.date.localeCompare(b.date)).slice(-30);
-        return { configured: true, provider: "SoSoValue", days };
+        return { configured: true, provider: "SoSoValue", days, fetchedAt: Date.now() };
       }
       const k = process.env['COINGLASS_API_KEY'];
       if (!k) return { configured: false, provider: "CoinGlass", days: [] };
@@ -92,7 +92,7 @@ export const getEtfHistory = createServerFn({ method: "GET" })
         for (const f of d.etf_flows ?? []) flows[f.etf_ticker] = (f.flow_usd ?? 0) / 1e6;
         return { date: new Date(d.timestamp).toISOString().slice(0, 10), total: (d.flow_usd ?? 0) / 1e6, flows };
       });
-      return { configured: true, provider: "CoinGlass", days };
+      return { configured: true, provider: "CoinGlass", days, fetchedAt: Date.now() };
     } catch (e) {
       return { configured: true, provider: data.provider, days: [], error: e instanceof Error ? e.message : "Failed" };
     }
