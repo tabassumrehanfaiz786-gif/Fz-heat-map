@@ -85,6 +85,7 @@
   --bull: oklch(0.8 0.2 145);
   --bear: oklch(0.65 0.23 22);
   --wall: oklch(0.6 0.25 25);
+  --conflict: oklch(0.8 0.17 70);
   --font-display: "Space Grotesk", sans-serif;
   --font-mono-ui: "JetBrains Mono", monospace;
 }
@@ -93,6 +94,7 @@
   --color-bull: var(--bull);
   --color-bear: var(--bear);
   --color-wall: var(--wall);
+  --color-conflict: var(--conflict);
   --font-display: var(--font-display);
   --font-mono: var(--font-mono-ui);
   --font-sans: var(--font-display);
@@ -192,4 +194,14 @@
   .cal-fomc { border-left-color: var(--wall); }
   .cal-expiry { border-left-color: var(--primary); }
   .cal-jobs { border-left-color: var(--accent); }
+  .flag {
+    display: inline-block;
+    font-family: var(--font-mono-ui);
+    font-size: 9px;
+    text-transform: uppercase;
+    padding: 0 0.3rem;
+    border-radius: 0.2rem;
+  }
+  .flag-stale, .flag-conflict { background: color-mix(in oklab, var(--conflict) 30%, transparent); color: var(--conflict); }
+  .flag-missing { background: color-mix(in oklab, var(--bear) 30%, transparent); color: var(--bear); }
 }
