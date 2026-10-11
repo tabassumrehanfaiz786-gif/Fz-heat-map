@@ -61,3 +61,43 @@ export const getEtfFlows = createServerFn({ method: "GET" })
       return { configured: true, provider: data.provider, rows: [], error: e instanceof Error ? e.message : "Failed" };
     }
   });
+
+export type EtfDay = { date: string; total: number; flows: Record<string, number> };
+export type EtfHistory = { configured: boolean; provider: string; days: EtfDay[]; error?: string | undefined };
+
+export const getEtfHistory = createServerFn({ method: "GET" })
+  .inputValidator((input: { provider: string }) => ({ provider: input?.provider === "sosovalue" ? "sosovalue" : "coinglass" }))
+  .handler(async ({ data }): Promise<EtfHistory> => {
+    try {
+      if (data.provider === "sosovalue") {
+        const k = process.env['SOSOVALUE_API_KEY'];
+        if (!k) return { configured: false, provider: "SoSoValue", days: [] };
+        const res = await fetch("https://api.sosovalue.xyz/openapi/v2/etf/historicalInflowChart", {
+          method: "POST", headers: { "x-soso-api-key": k, "Content-Type": "application/json" }, body: JSON.stringify({ type: "us-btc-spot" }),
+        });
+        const body = await res.text();
+        if (!res.ok) return { configured: true, provider: "SoSoValue", days: [], error: `SoSoValue error [${res.status}]: ${body.slice(0, 200)}` };
+        const list: { date: string; totalNetInflow?: number | string }[] = JSON.parse(body).data ?? [];
+        const days = list.map((d) => ({ date: d.date, total: Number(d.totalNetInflow ?? 0) / 1e6, flows: {} })).sort((a, b) => a.date.localeCompare(b.date)).slice(-30);
+        return { configured: true, provider: "SoSoValue", days };
+      }
+      const k = process.env['COINGLASS_API_KEY'];
+      if (!k) return { configured: false, provider: "CoinGlass", days: [] };
+      const res = await fetch("https://open-api-v4.coinglass.com/api/etf/bitcoin/flow-history", { headers: { "CG-API-KEY": k, accept: "application/json" } });
+      const body = await res.text();
+      if (!res.ok) return { configured: true, provider: "CoinGlass", days: [], error: `CoinGlass error [${res.status}]: ${body.slice(0, 200)}` };
+      const raw: { timestamp: number; flow_usd?: number; etf_flows?: { etf_ticker: string; flow_usd?: number }[] }[] = JSON.parse(body).data ?? [];
+      const days = raw.sort((a, b) => a.timestamp - b.timestamp).slice(-30).map((d) => {
+        const flows: Record<string, number> = {};
+        for (const f of d.etf_flows ?? []) flows[f.etf_ticker] = (f.flow_usd ?? 0) / 1e6;
+        return { date: new Date(d.timestamp).toISOString().slice(0, 10), total: (d.flow_usd ?? 0) / 1e6, flows };
+      });
+      return { configured: true, provider: "CoinGlass", days };
+    } catch (e) {
+      return { configured: true, provider: data.provider, days: [], error: e instanceof Error ? e.message : "Failed" };
+    }
+  });
+
+export function issuerName(t: string) {
+  return ISSUERS[t] ?? t;
+}
