@@ -4,6 +4,7 @@ import { Settings2 } from "lucide-react";
 import { LiveMarket, TFS, type TF } from "@/components/LiveMarket";
 import { EtfFlows } from "@/components/EtfFlows";
 import { NewsFeed, newsQuery } from "@/components/NewsFeed";
+import { EtfDivergence } from "@/components/EtfDivergence";
 import { MacroCalendar } from "@/components/MacroCalendar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -51,10 +52,14 @@ function Index() {
           <Tabs defaultValue="news" className="flex min-h-0 flex-1 flex-col">
             <TabsList className="w-full">
               <TabsTrigger value="news" className="flex-1">News</TabsTrigger>
+              <TabsTrigger value="flows" className="flex-1">Flows 30D</TabsTrigger>
               <TabsTrigger value="calendar" className="flex-1">Calendar</TabsTrigger>
             </TabsList>
             <TabsContent value="news" className="flex min-h-0 flex-1 flex-col">
               <Suspense fallback={<div className="panel flex-1" />}><NewsFeed /></Suspense>
+            </TabsContent>
+            <TabsContent value="flows" className="flex min-h-0 flex-1 flex-col">
+              <EtfDivergence onConfigure={() => setOpen(true)} />
             </TabsContent>
             <TabsContent value="calendar" className="flex min-h-0 flex-1 flex-col">
               <MacroCalendar />

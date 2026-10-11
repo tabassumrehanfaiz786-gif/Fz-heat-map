@@ -92,6 +92,7 @@
 @theme inline {
   --color-bull: var(--bull);
   --color-bear: var(--bear);
+  --color-wall: var(--wall);
   --font-display: var(--font-display);
   --font-mono: var(--font-mono-ui);
   --font-sans: var(--font-display);
