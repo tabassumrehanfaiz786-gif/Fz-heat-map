@@ -71,7 +71,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
 
   const W = 320, H = 120, bw = W / Math.max(1, rows.length);
   return (
-    <div className="panel flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
+    <div className="panel min-h-0 flex-1 overflow-y-auto p-4">
       <div className="mb-1 flex items-baseline justify-between">
         <h2 className="font-display text-sm font-semibold tracking-wide text-foreground">30-day ETF flows</h2>
         <span className="font-mono text-[11px]"><span className="text-bull">+{totalIn.toFixed(0)}M</span> / <span className="text-bear">{totalOut.toFixed(0)}M</span></span>
