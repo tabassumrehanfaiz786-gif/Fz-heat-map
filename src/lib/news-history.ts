@@ -38,12 +38,12 @@ export function parseHistoricalNews(xml: string): HistoricalHeadline[] {
   const items: Record<string, unknown>[] = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
   const text = (value: unknown): string => typeof value === "string" ? value : typeof value === "object" && value !== null && "#text" in value ? String(value["#text"]) : "";
   return items.flatMap((item) => {
-    const source = text(item.source) || "Google News";
-    const originalTitle = text(item.title);
+    const source = text(item['source']) || "Google News";
+    const originalTitle = text(item['title']);
     const suffix = ` - ${source}`;
     const title = originalTitle.endsWith(suffix) ? originalTitle.slice(0, -suffix.length) : originalTitle;
-    const url = text(item.link);
-    const publishedAt = Date.parse(text(item.pubDate));
+    const url = text(item['link']);
+    const publishedAt = Date.parse(text(item['pubDate']));
     if (!title || !/bitcoin|\bbtc\b/i.test(title) || !Number.isFinite(publishedAt) || !/^https?:\/\//i.test(url)) return [];
     return [{ id: `history-${url}`, title, url, source, publishedAt, sentiment: headlineSentiment(title) }];
   });

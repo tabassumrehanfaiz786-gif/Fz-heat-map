@@ -110,7 +110,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
   const totalIn = rows.reduce((a, r) => a + Math.max(0, r.total), 0), totalOut = rows.reduce((a, r) => a + Math.min(0, r.total), 0);
 
   const ai = useMutation({
-    mutationFn: () => analyzeDivergence({ data: { days: withPrice.map((r) => ({ date: r.date, flow: r.total, priceChg: r.priceChg ?? 0 })), headlines: rows.flatMap((r) => (newsByDay.get(r.date)?.items ?? []).slice(0, 2).map((n) => `${r.date}: ${n.title}`)).slice(-60) } }),
+    mutationFn: () => analyzeDivergence({ data: { days: withPrice.map((r) => ({ date: r.date, flow: r.total, priceChg: r.priceChg ?? 0 })), headlines: rows.flatMap((r) => (newsByDay.get(r.date)?.items ?? []).slice(0, 1).map((n) => `${r.date}: ${n.title}`)).slice(-25) } }),
   });
 
   const exportPdf = async () => {
