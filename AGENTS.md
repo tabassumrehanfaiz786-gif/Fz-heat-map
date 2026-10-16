@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep historical Bitcoin news separate from the capped live feed; fetch date-windowed RSS in a server-only helper and normalize dated headlines in a shared pure module so timeline history does not slow the first screen.

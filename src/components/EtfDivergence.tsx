@@ -3,6 +3,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { getEtfHistory, issuerName, type EtfDay } from "@/lib/etf.functions";
 import { analyzeDivergence } from "@/lib/ai.functions";
 import { newsQuery } from "@/components/NewsFeed";
+import { getBtcNewsHistory } from "@/lib/news.functions";
+import { normalizeHistoricalNews } from "@/lib/news-history";
 import { useSettings } from "@/lib/settings";
 import { exportDivergencePdf } from "@/lib/report-pdf";
 
@@ -51,6 +53,8 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
     refetchInterval: 300_000,
   });
   const news = useQuery(newsQuery);
+  const newsHistory = useQuery({ queryKey: ["btc-news-history", 30], queryFn: () => getBtcNewsHistory(), staleTime: 600_000, refetchInterval: 600_000 });
+  const headlines = useMemo(() => normalizeHistoricalNews([...(newsHistory.data?.items ?? []), ...(news.data ?? [])], Date.now()), [newsHistory.data, news.data]);
   const live = !!hist.data?.configured && !hist.data.error && hist.data.days.length > 0;
   const days = useMemo(() => (live ? hist.data!.days : sampleDays()), [live, hist.data]);
   const source = live ? hist.data!.provider : "Sample data";
@@ -60,7 +64,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
   // news by day
   const newsByDay = useMemo(() => {
     const m = new Map<string, { score: number; items: { title: string; tone: string; url: string }[] }>();
-    for (const n of news.data ?? []) {
+    for (const n of headlines) {
       const d = new Date(n.publishedAt).toISOString().slice(0, 10);
       const r = m.get(d) ?? { score: 0, items: [] };
       r.score += n.sentiment === "positive" ? 1 : n.sentiment === "negative" ? -1 : 0;
@@ -68,7 +72,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
       m.set(d, r);
     }
     return m;
-  }, [news.data]);
+  }, [headlines]);
 
   const issuers = useMemo(() => {
     const m = new Map<string, { inflow: number; outflow: number; lastDate: string | null; missingLatest: boolean }>();
@@ -106,7 +110,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
   const totalIn = rows.reduce((a, r) => a + Math.max(0, r.total), 0), totalOut = rows.reduce((a, r) => a + Math.min(0, r.total), 0);
 
   const ai = useMutation({
-    mutationFn: () => analyzeDivergence({ data: { days: withPrice.map((r) => ({ date: r.date, flow: r.total, priceChg: r.priceChg! })), headlines: (news.data ?? []).slice(0, 25).map((n) => n.title) } }),
+    mutationFn: () => analyzeDivergence({ data: { days: withPrice.map((r) => ({ date: r.date, flow: r.total, priceChg: r.priceChg ?? 0 })), headlines: rows.flatMap((r) => (newsByDay.get(r.date)?.items ?? []).slice(0, 2).map((n) => `${r.date}: ${n.title}`)).slice(-60) } }),
   });
 
   const exportPdf = async () => {
@@ -114,7 +118,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
     try {
       await exportDivergencePdf({
         source, updated, rows, issuers, ai: ai.data,
-        headlines: (news.data ?? []).map((n) => ({ date: new Date(n.publishedAt).toISOString().slice(0, 10), title: n.title, tone: n.sentiment })),
+        headlines: headlines.map((n) => ({ date: new Date(n.publishedAt).toISOString().slice(0, 10), title: n.title, tone: n.sentiment })),
       });
     } finally { setExporting(false); }
   };
@@ -156,6 +160,12 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
       )}
 
       <h3 className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Timeline · flows, price & news</h3>
+      <p className="mb-2 text-[10px] text-muted-foreground" aria-live="polite">
+        {newsHistory.isPending ? "Loading 30-day news history…" : newsHistory.isError || newsHistory.data?.failedWindows === 5 ? "News archive unavailable · recent headlines only." : <>
+          News archive: Google News · {newsHistory.data?.startDate}–{newsHistory.data?.endDate} (UTC) · {headlines.length} available headlines
+          {(newsHistory.data?.failedWindows ?? 0) > 0 && <span className="text-conflict"> · partial coverage</span>}
+        </>}
+      </p>
       <svg viewBox={`0 0 ${W} ${H}`} className="mb-1 w-full cursor-pointer">
         <line x1="0" x2={W} y1={mid} y2={mid} className="stroke-border" />
         {rows.map((r, i) => {
@@ -186,7 +196,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
             {(newsByDay.get(selRow.date)?.items ?? []).slice(0, 5).map((n) => (
               <li key={n.url}><a href={n.url} target="_blank" rel="noreferrer" className={n.tone === "positive" ? "text-bull" : n.tone === "negative" ? "text-bear" : "text-foreground"}>{n.title}</a></li>
             ))}
-            {!newsByDay.get(selRow.date) && <li className="text-muted-foreground">No headlines in the feed for this day (the news feed covers only the last few days).</li>}
+            {!newsByDay.get(selRow.date) && <li className="text-muted-foreground">{newsHistory.isPending ? "Loading historical headlines…" : newsHistory.isError || (newsHistory.data?.failedWindows ?? 0) > 0 ? "Headlines unavailable for this day; archive coverage is incomplete." : selRow.date < (newsHistory.data?.startDate ?? "") ? "This day is outside the 30-calendar-day news archive." : "No Bitcoin headlines returned for this day."}</li>}
           </ul>
         </div>
       )}

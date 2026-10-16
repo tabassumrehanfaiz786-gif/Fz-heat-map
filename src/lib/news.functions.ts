@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { fetchBitcoinNewsHistory } from "./news-history.server";
 
 export type NewsItem = {
   id: string;
@@ -54,3 +55,5 @@ export const getBtcNews = createServerFn({ method: "GET" }).handler(async () => 
   const btc = all.filter((n) => /bitcoin|btc|etf|crypto/i.test(n.title));
   return btc.sort((a, b) => b.publishedAt - a.publishedAt).slice(0, 40);
 });
+
+export const getBtcNewsHistory = createServerFn({ method: "GET" }).handler(() => fetchBitcoinNewsHistory());
