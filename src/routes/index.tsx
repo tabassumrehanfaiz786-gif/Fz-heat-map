@@ -6,6 +6,7 @@ import { EtfFlows } from "@/components/EtfFlows";
 import { NewsFeed, newsQuery } from "@/components/NewsFeed";
 import { EtfDivergence } from "@/components/EtfDivergence";
 import { MacroCalendar } from "@/components/MacroCalendar";
+import { Surveillance } from "@/components/Surveillance";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -54,6 +55,7 @@ function Index() {
               <TabsTrigger value="news" className="flex-1">News</TabsTrigger>
               <TabsTrigger value="flows" className="flex-1">Flows 30D</TabsTrigger>
               <TabsTrigger value="calendar" className="flex-1">Calendar</TabsTrigger>
+              <TabsTrigger value="algo" className="flex-1">Algo</TabsTrigger>
             </TabsList>
             <TabsContent value="news" className="flex min-h-0 flex-1 flex-col">
               <Suspense fallback={<div className="panel flex-1" />}><NewsFeed /></Suspense>
@@ -63,6 +65,9 @@ function Index() {
             </TabsContent>
             <TabsContent value="calendar" className="flex min-h-0 flex-1 flex-col">
               <MacroCalendar />
+            </TabsContent>
+            <TabsContent value="algo" className="flex min-h-0 flex-1 flex-col">
+              <ClientOnly fallback={<div className="panel flex-1" />}><Surveillance /></ClientOnly>
             </TabsContent>
           </Tabs>
         </aside>
