@@ -12,8 +12,8 @@ describe("iceberg detector", () => {
     }
     const ev = d.events(3000);
     expect(ev).toHaveLength(1);
-    expect(ev[0].passiveSide).toBe("bid");
-    expect(ev[0].refills).toBeGreaterThanOrEqual(2);
+    expect(ev[0]!.passiveSide).toBe("bid");
+    expect(ev[0]!.refills).toBeGreaterThanOrEqual(2);
   });
   it("does not flag when executed is below 2.5x visible", () => {
     const d = new IcebergDetector(1, 0.1);
@@ -29,8 +29,8 @@ describe("twap detector", () => {
     const t: Trade[] = Array.from({ length: 6 }, (_, i) => ({ price: 100, qty: 0.5, time: i * 10_000, side: "buy" }));
     const ev = detectTwap(t);
     expect(ev).toHaveLength(1);
-    expect(ev[0].slices).toBe(6);
-    expect(Math.round(ev[0].intervalMs)).toBe(10_000);
+    expect(ev[0]!.slices).toBe(6);
+    expect(Math.round(ev[0]!.intervalMs)).toBe(10_000);
   });
   it("ignores irregular timing", () => {
     const times = [0, 1000, 15000, 16000, 40000, 41000];
