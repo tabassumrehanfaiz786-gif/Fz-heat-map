@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { fetchCoinGlassDays } from "./coinglass.server";
 
 export type EtfRow = { ticker: string; issuer: string; today: number; week: number };
 export type EtfResult = { configured: boolean; provider: string; rows: EtfRow[]; date?: string | undefined; error?: string | undefined };
@@ -10,23 +11,17 @@ const ISSUERS: Record<string, string> = {
 };
 
 async function coinglass(key: string): Promise<EtfResult> {
-  const res = await fetch("https://open-api-v4.coinglass.com/api/etf/bitcoin/flow-history", { headers: { "CG-API-KEY": key, accept: "application/json" } });
-  const body = await res.text();
-  if (!res.ok) return { configured: true, provider: "CoinGlass", rows: [], error: `CoinGlass error [${res.status}]: ${body.slice(0, 200)}` };
-  const json = JSON.parse(body);
-  const days: { timestamp: number; etf_flows?: { etf_ticker: string; flow_usd?: number }[] }[] = Array.isArray(json.data) ? json.data : [];
-  if (!days.length) return { configured: true, provider: "CoinGlass", rows: [], error: json.msg || "No data returned" };
-  days.sort((a, b) => a.timestamp - b.timestamp);
-  const last5 = days.slice(-5), lastDay = last5[last5.length - 1]!;
+  const days = await fetchCoinGlassDays(key);
+  const last5 = days.slice(-5), lastDay = last5.at(-1);
+  if (!lastDay) return { configured: true, provider: "CoinGlass", rows: [], error: "No ETF flow data returned." };
   const map = new Map<string, EtfRow>();
-  for (const d of last5) for (const f of d.etf_flows ?? []) {
-    const r = map.get(f.etf_ticker) ?? { ticker: f.etf_ticker, issuer: ISSUERS[f.etf_ticker] ?? f.etf_ticker, today: 0, week: 0 };
-    const m = (f.flow_usd ?? 0) / 1e6;
+  for (const d of last5) for (const [ticker, m] of Object.entries(d.flows)) {
+    const r = map.get(ticker) ?? { ticker, issuer: ISSUERS[ticker] ?? ticker, today: 0, week: 0 };
     r.week += m;
     if (d === lastDay) r.today = m;
-    map.set(f.etf_ticker, r);
+    map.set(ticker, r);
   }
-  return { configured: true, provider: "CoinGlass", rows: [...map.values()].sort((a, b) => Math.abs(b.week) - Math.abs(a.week)), date: new Date(lastDay.timestamp).toISOString().slice(0, 10) };
+  return { configured: true, provider: "CoinGlass", rows: [...map.values()].filter((r) => r.ticker in lastDay.flows).sort((a, b) => Math.abs(b.week) - Math.abs(a.week)), date: lastDay.date };
 }
 
 async function sosovalue(key: string): Promise<EtfResult> {
@@ -83,15 +78,7 @@ export const getEtfHistory = createServerFn({ method: "GET" })
       }
       const k = process.env['COINGLASS_API_KEY'];
       if (!k) return { configured: false, provider: "CoinGlass", days: [] };
-      const res = await fetch("https://open-api-v4.coinglass.com/api/etf/bitcoin/flow-history", { headers: { "CG-API-KEY": k, accept: "application/json" } });
-      const body = await res.text();
-      if (!res.ok) return { configured: true, provider: "CoinGlass", days: [], error: `CoinGlass error [${res.status}]: ${body.slice(0, 200)}` };
-      const raw: { timestamp: number; flow_usd?: number; etf_flows?: { etf_ticker: string; flow_usd?: number }[] }[] = JSON.parse(body).data ?? [];
-      const days = raw.sort((a, b) => a.timestamp - b.timestamp).slice(-30).map((d) => {
-        const flows: Record<string, number> = {};
-        for (const f of d.etf_flows ?? []) flows[f.etf_ticker] = (f.flow_usd ?? 0) / 1e6;
-        return { date: new Date(d.timestamp).toISOString().slice(0, 10), total: (d.flow_usd ?? 0) / 1e6, flows };
-      });
+      const days = await fetchCoinGlassDays(k);
       return { configured: true, provider: "CoinGlass", days, fetchedAt: Date.now() };
     } catch (e) {
       return { configured: true, provider: data.provider, days: [], error: e instanceof Error ? e.message : "Failed" };
