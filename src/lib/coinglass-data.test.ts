@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { parseCoinGlassDays } from "./coinglass-data";
+import { parseCoinGlassDays, issuerConnectionStatus } from "./coinglass-data";
 
 describe("CoinGlass licensed issuer flows", () => {
+  it("only reports live connection when actual issuer rows are returned", () => {
+    expect(issuerConnectionStatus({ configured: true, rows: [{ ticker: "IBIT", today: 111.7 }] })).toBe("connected");
+    expect(issuerConnectionStatus({ configured: true, rows: [] })).toBe("no-issuer-data");
+    expect(issuerConnectionStatus({ configured: false, rows: [] })).toBe("missing-key");
+    expect(issuerConnectionStatus({ configured: true, rows: [], error: "Rejected" })).toBe("failed");
+  });
   it("converts real USD values to millions and retains issuer tickers", () => {
     const days = parseCoinGlassDays({ code: "0", data: [{ timestamp: 1704931200000, flow_usd: 655300000, etf_flows: [{ etf_ticker: "IBIT", flow_usd: 111700000 }, { etf_ticker: "FBTC", flow_usd: 227000000 }, { etf_ticker: "GBTC", flow_usd: -95100000 }] }] });
     expect(days[0]).toEqual({ date: "2024-01-11", total: 655.3, flows: { IBIT: 111.7, FBTC: 227, GBTC: -95.1 } });

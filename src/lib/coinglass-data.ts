@@ -7,6 +7,13 @@ const responseSchema = z.object({
   data: z.array(z.object({ timestamp: finiteNumber, flow_usd: finiteNumber.nullish(), etf_flows: z.array(flowSchema).optional() })).optional(),
 });
 
+export function issuerConnectionStatus(result: { configured: boolean; rows: unknown[]; error?: string | undefined } | undefined) {
+  if (!result) return "unavailable";
+  if (!result.configured) return "missing-key";
+  if (result.error) return "failed";
+  return result.rows.length > 0 ? "connected" : "no-issuer-data";
+}
+
 export function parseCoinGlassDays(input: unknown) {
   const response = responseSchema.safeParse(input);
   if (!response.success) throw new Error("CoinGlass returned an unsupported data format.");
