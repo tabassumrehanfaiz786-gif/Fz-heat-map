@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { setSettings, useSettings, type EtfProvider } from "@/lib/settings";
 import { getEtfFlows } from "@/lib/etf.functions";
+import { Button } from "@/components/ui/button";
+import { ExternalLink, RefreshCw, ShieldCheck } from "lucide-react";
 
 const PROVIDERS: { id: EtfProvider; name: string; secret: string; where: string }[] = [
   { id: "coinglass", name: "CoinGlass", secret: "COINGLASS_API_KEY", where: "coinglass.com → API → your plan's API key" },
@@ -23,7 +25,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const s = useSettings();
   const status = useQuery({ queryKey: ["etf", s.etfProvider], queryFn: () => getEtfFlows({ data: { provider: s.etfProvider } }), enabled: open });
-  const p = PROVIDERS.find((x) => x.id === s.etfProvider)!;
+  const p = PROVIDERS.find((x) => x.id === s.etfProvider) ?? PROVIDERS[0];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -48,7 +50,11 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
               <span className="text-bear">API key not added yet</span>
             )}
           </p>
-          <p className="text-xs text-muted-foreground">Get your key at {p.where}. Your key is stored securely on the server, never in the browser — ask in chat to add it.</p>
+          <p className="text-xs text-muted-foreground">Get your key at {p?.where}. Save it as {p?.secret} in Lovable Cloud secrets. Only project editors can change it; visitors cannot view or overwrite it.</p>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="outline"><a href="https://lovable.dev/projects/5aa12fb1-55cb-4274-b4fe-ebe2e0e1095f?view=more&subview=cloud" target="_blank" rel="noreferrer"><ShieldCheck />Secure key settings<ExternalLink /></a></Button>
+            <Button size="sm" variant="outline" disabled={status.isFetching} onClick={() => status.refetch()}><RefreshCw className={status.isFetching ? "animate-spin" : ""} />Check connection</Button>
+          </div>
         </section>
 
         <section className="space-y-1 border-t border-border pt-3">
