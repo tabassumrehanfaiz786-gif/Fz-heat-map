@@ -27,9 +27,9 @@ export function Surveillance() {
         det.current.onTrade(t, vis);
         trades.current.push(t);
         const cut = Date.now() - 10 * 60_000;
-        if (trades.current.length > 20000 || trades.current[0].time < cut) trades.current = trades.current.filter((x) => x.time >= cut).slice(-20000);
+        if (trades.current.length > 20000 || trades.current[0]!.time < cut) trades.current = trades.current.filter((x) => x.time >= cut).slice(-20000);
       } else {
-        const agg = (rows: string[][]) => { const m = new Map<number, number>(); for (const [p, q] of rows) { const k = Math.round(+p); m.set(k, (m.get(k) ?? 0) + +q); } return m; };
+        const agg = (rows: string[][]) => { const m = new Map<number, number>(); for (const [p = "0", q = "0"] of rows) { const k = Math.round(+p); m.set(k, (m.get(k) ?? 0) + +q); } return m; };
         bids.current = agg(data.bids); asks.current = agg(data.asks);
         det.current.onBook(bids.current, asks.current, Date.now());
       }

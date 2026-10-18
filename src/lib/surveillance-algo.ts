@@ -63,12 +63,12 @@ export function detectTwap(trades: Trade[], opts = { minSlices: 5, sizeTol: 0.15
     const used = new Set<number>();
     for (let i = 0; i < ts.length; i++) {
       if (used.has(i)) continue;
-      const ref = ts[i].qty;
+      const ref = ts[i]!.qty;
       const grp = [i];
-      for (let j = i + 1; j < ts.length; j++) if (!used.has(j) && Math.abs(ts[j].qty - ref) / ref <= opts.sizeTol) grp.push(j);
+      for (let j = i + 1; j < ts.length; j++) if (!used.has(j) && Math.abs(ts[j]!.qty - ref) / ref <= opts.sizeTol) grp.push(j);
       if (grp.length < opts.minSlices) continue;
-      const g = grp.map((x) => ts[x]);
-      const iv = g.slice(1).map((t, k) => t.time - g[k].time);
+      const g = grp.map((x) => ts[x]!);
+      const iv = g.slice(1).map((t, k) => t.time - g[k]!.time);
       const mean = iv.reduce((a, b) => a + b, 0) / iv.length;
       if (mean < 500) continue;
       const sd = Math.sqrt(iv.reduce((a, b) => a + (b - mean) ** 2, 0) / iv.length);
@@ -77,7 +77,7 @@ export function detectTwap(trades: Trade[], opts = { minSlices: 5, sizeTol: 0.15
       grp.forEach((x) => used.add(x));
       const total = g.reduce((a, t) => a + t.qty, 0);
       out.push({ kind: "twap", side, slices: g.length, avgSize: total / g.length, intervalMs: mean, totalQty: total,
-        vwap: g.reduce((a, t) => a + t.price * t.qty, 0) / total, start: g[0].time, last: g[g.length - 1].time, regularity: 1 - cv });
+        vwap: g.reduce((a, t) => a + t.price * t.qty, 0) / total, start: g[0]!.time, last: g[g.length - 1]!.time, regularity: 1 - cv });
     }
   }
   return out.sort((a, b) => b.totalQty - a.totalQty);
