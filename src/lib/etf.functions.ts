@@ -53,7 +53,7 @@ export const getEtfFlows = createServerFn({ method: "GET" })
       const k = process.env['COINGLASS_API_KEY'];
       return k ? await coinglass(k) : { configured: false, provider: "CoinGlass", rows: [] };
     } catch (e) {
-      return { configured: true, provider: data.provider, rows: [], error: e instanceof Error ? e.message : "Failed" };
+      return { configured: true, provider: data.provider, rows: [], error: data.provider === "coinglass" ? "CoinGlass connection failed. Check your key, ETF plan access, or try again later." : "ETF provider connection failed. Try again later." };
     }
   });
 
@@ -81,7 +81,7 @@ export const getEtfHistory = createServerFn({ method: "GET" })
       const days = await fetchCoinGlassDays(k);
       return { configured: true, provider: "CoinGlass", days, fetchedAt: Date.now() };
     } catch (e) {
-      return { configured: true, provider: data.provider, days: [], error: e instanceof Error ? e.message : "Failed" };
+      return { configured: true, provider: data.provider, days: [], error: "ETF history connection failed. Check your key, plan access, or try again later." };
     }
   });
 

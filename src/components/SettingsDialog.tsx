@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -7,6 +8,7 @@ import { setSettings, useSettings, type EtfProvider } from "@/lib/settings";
 import { getEtfFlows } from "@/lib/etf.functions";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, RefreshCw, ShieldCheck } from "lucide-react";
+import { issuerConnectionStatus } from "@/lib/coinglass-data";
 
 const PROVIDERS: { id: EtfProvider; name: string; secret: string; where: string }[] = [
   { id: "coinglass", name: "CoinGlass", secret: "COINGLASS_API_KEY", where: "coinglass.com → API → your plan's API key" },
@@ -24,8 +26,18 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const s = useSettings();
+  const queryClient = useQueryClient();
+  const [checked, setChecked] = useState<{ provider: string; at: number } | null>(null);
   const status = useQuery({ queryKey: ["etf", s.etfProvider], queryFn: () => getEtfFlows({ data: { provider: s.etfProvider } }), enabled: open });
   const p = PROVIDERS.find((x) => x.id === s.etfProvider) ?? PROVIDERS[0];
+  const connection = issuerConnectionStatus(status.data);
+  const testConnection = async () => {
+    const result = await status.refetch();
+    setChecked({ provider: s.etfProvider, at: Date.now() });
+    if (issuerConnectionStatus(result.data) === "connected") {
+      await queryClient.invalidateQueries({ queryKey: ["etf-hist", s.etfProvider] });
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -42,18 +54,19 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
               <button key={x.id} className={`btn-chip ${s.etfProvider === x.id ? "btn-chip-active" : ""}`} onClick={() => setSettings({ etfProvider: x.id })}>{x.name}</button>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p role="status" aria-live="polite" className="text-xs text-muted-foreground">
             Status:{" "}
-            {status.isLoading ? "checking…" : status.data?.configured ? (
-              status.data.error ? <span className="text-bear">{status.data.error}</span> : <span className="text-bull">connected</span>
-            ) : (
-              <span className="text-bear">API key not added yet</span>
-            )}
+            {status.isFetching ? "Testing saved key…" : connection === "connected" ? (
+              <span className="text-bull">Live issuer flows connected · {status.data?.rows.length} issuers{status.data?.date ? ` · latest flow ${status.data.date}` : ""}</span>
+            ) : connection === "missing-key" ? <span className="text-bear">No saved API key found · live issuer flows not connected</span>
+              : connection === "no-issuer-data" ? <span className="text-bear">Key configured, but no live issuer flows returned</span>
+              : <span className="text-bear">Live issuer flows not connected · {status.data?.error ?? "Unable to check connection. Try again."}</span>}
           </p>
+          {checked?.provider === s.etfProvider && <p className="text-xs text-muted-foreground">Last tested: {new Date(checked.at).toLocaleString()}</p>}
           <p className="text-xs text-muted-foreground">Get your key at {p?.where}. Save it as {p?.secret} in Lovable Cloud secrets. Only project editors can change it; visitors cannot view or overwrite it.</p>
           <div className="flex flex-wrap gap-2">
             <Button asChild size="sm" variant="outline"><a href="https://lovable.dev/projects/5aa12fb1-55cb-4274-b4fe-ebe2e0e1095f?view=more&subview=cloud" target="_blank" rel="noreferrer"><ShieldCheck />Secure key settings<ExternalLink /></a></Button>
-            <Button size="sm" variant="outline" disabled={status.isFetching} onClick={() => status.refetch()}><RefreshCw className={status.isFetching ? "animate-spin" : ""} />Check connection</Button>
+            <Button size="sm" variant="outline" disabled={status.isFetching} onClick={testConnection}><RefreshCw className={status.isFetching ? "animate-spin" : ""} />{status.isFetching ? "Testing…" : "Test saved API key"}</Button>
           </div>
         </section>
 
