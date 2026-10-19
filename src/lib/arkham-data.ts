@@ -52,10 +52,13 @@ export function parseArkhamTransfer(entityId: string, raw: unknown): VaultTransf
   if (!hash || !Number.isFinite(time) || time <= 0) return null;
   const btc = unit === "BTC" && Number.isFinite(tokenValue) ? Math.abs(tokenValue) : Number.isFinite(usd) && usd > 0 ? usd / 100_000 : NaN;
   if (!Number.isFinite(btc)) return null;
-  const from = (r.fromAddress as Record<string, unknown> | undefined)?.arkhamEntity as Record<string, unknown> | undefined;
-  const to = (r.toAddress as Record<string, unknown> | undefined)?.arkhamEntity as Record<string, unknown> | undefined;
-  const toId = typeof to?.["id"] === "string" ? to["id"] as string : "";
-  const fromId = typeof from?.["id"] === "string" ? from["id"] as string : "";
+  const labelOf = (addr: unknown): string => {
+    const entity = (addr as Record<string, unknown> | undefined)?.["arkhamEntity"] as Record<string, unknown> | undefined;
+    const id = entity?.["id"];
+    return typeof id === "string" ? id : "";
+  };
+  const fromId = labelOf(r["fromAddress"]);
+  const toId = labelOf(r["toAddress"]);
   const direction: "in" | "out" = toId ? "in" : "out";
   const counterparty = direction === "in" ? (fromId || "unknown") : (toId || "unknown");
   return {
