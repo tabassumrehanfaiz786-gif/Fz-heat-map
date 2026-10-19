@@ -56,7 +56,7 @@ export function parseArkhamTransfer(entityId: string, raw: unknown): VaultTransf
   const to = (r.toAddress as Record<string, unknown> | undefined)?.arkhamEntity as Record<string, unknown> | undefined;
   const toId = typeof to?.id === "string" ? to.id : "";
   const fromId = typeof from?.id === "string" ? from.id : "";
-  const direction: "in" | "out" = toId && !fromId ? "in" : "out";
+  const direction: "in" | "out" = toId ? "in" : "out";
   const counterparty = direction === "in" ? (fromId || "unknown") : (toId || "unknown");
   return {
     entityId,
