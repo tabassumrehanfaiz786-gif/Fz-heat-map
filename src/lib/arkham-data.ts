@@ -43,12 +43,12 @@ export function entityName(id: string) {
 export function parseArkhamTransfer(entityId: string, raw: unknown): VaultTransfer | null {
   if (typeof raw !== "object" || raw === null) return null;
   const r = raw as Record<string, unknown>;
-  const hash = typeof r.transactionHash === "string" ? r.transactionHash : typeof r.txHash === "string" ? r.txHash : null;
-  const tsRaw = r.blockTimestamp ?? r.timestamp;
+  const hash = typeof r["transactionHash"] === "string" ? r["transactionHash"] as string : typeof r["txHash"] === "string" ? r["txHash"] as string : null;
+  const tsRaw = r["blockTimestamp"] ?? r["timestamp"];
   const time = typeof tsRaw === "string" ? Date.parse(tsRaw) : typeof tsRaw === "number" ? (tsRaw < 1e12 ? tsRaw * 1000 : tsRaw) : NaN;
-  const unit = typeof r.unit === "string" ? r.unit.toUpperCase() : "BTC";
-  const usd = Number(r.historicalUSD ?? r.usd ?? 0);
-  const tokenValue = Number(r.tokenValue ?? r.value ?? NaN);
+  const unit = typeof r["unit"] === "string" ? (r["unit"] as string).toUpperCase() : "BTC";
+  const usd = Number(r["historicalUSD"] ?? r["usd"] ?? 0);
+  const tokenValue = Number(r["tokenValue"] ?? r["value"] ?? NaN);
   if (!hash || !Number.isFinite(time) || time <= 0) return null;
   const btc = unit === "BTC" && Number.isFinite(tokenValue) ? Math.abs(tokenValue) : Number.isFinite(usd) && usd > 0 ? usd / 100_000 : NaN;
   if (!Number.isFinite(btc)) return null;
