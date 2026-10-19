@@ -52,7 +52,7 @@ export function VaultTracker({ onConfigure }: { onConfigure: () => void }) {
     try {
       const etfDays = new Map((etf.data?.days ?? []).map((d) => [d.date, d.total]));
       const headlinesByDate = new Map<string, string[]>();
-      for (const n of news.data ?? []) {
+      for (const n of news.data?.items ?? []) {
         const date = new Date(n.publishedAt).toISOString().slice(0, 10);
         const list = headlinesByDate.get(date) ?? [];
         if (list.length < 3) list.push(n.title);
