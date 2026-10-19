@@ -15,7 +15,7 @@ async function fetchEntityTransfers(key: string, entity: string, sinceMs: number
   });
   if (!res.ok) throw new Error(`Arkham error [${res.status}]`);
   const json: unknown = await res.json();
-  const rows = Array.isArray(json) ? json : ((json as Record<string, unknown>).transfers as unknown[] | undefined) ?? [];
+  const rows = Array.isArray(json) ? json : ((json as Record<string, unknown>)["transfers"] as unknown[] | undefined) ?? [];
   return rows
     .map((r) => parseArkhamTransfer(entity, r))
     .filter((t): t is VaultTransfer => t !== null && t.time >= sinceMs);
