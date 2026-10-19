@@ -107,3 +107,50 @@ export const analyzeDivergence = createServerFn({ method: "POST" })
       `Daily data:\n${table}\n\nRecent headlines:\n${data.headlines.map((h) => "- " + h).join("\n")}`,
       "etf_divergence", divSchema);
   });
+
+export type TripleDay = { date: string; etfFlow: number; onChainUsd: number; priceChg: number; headlines: string[] };
+export type TripleResult = {
+  verdict: string;
+  days: { date: string; signal: "confirmed" | "paper-disconnect" | "noise" | "unclear"; explanation: string }[];
+};
+
+const tripleSchema = {
+  type: "object", additionalProperties: false, required: ["verdict", "days"],
+  properties: {
+    verdict: { type: "string" },
+    days: {
+      type: "array",
+      items: {
+        type: "object", additionalProperties: false, required: ["date", "signal", "explanation"],
+        properties: {
+          date: { type: "string" },
+          signal: { type: "string", enum: ["confirmed", "paper-disconnect", "noise", "unclear"] },
+          explanation: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
+export const analyzeTripleVerification = createServerFn({ method: "POST" })
+  .inputValidator((input: { days: TripleDay[] }) => {
+    if (!input || !Array.isArray(input.days)) throw new Error("days required");
+    return {
+      days: input.days.slice(-31).map((d) => ({
+        date: String(d.date).slice(0, 10),
+        etfFlow: Number(d.etfFlow) || 0,
+        onChainUsd: Number(d.onChainUsd) || 0,
+        priceChg: Number(d.priceChg) || 0,
+        headlines: (d.headlines ?? []).slice(0, 3).map((h) => String(h).slice(0, 200)),
+      })),
+    };
+  })
+  .handler(async ({ data }) => {
+    const table = data.days
+      .map((d) => `${d.date}: ETF flow ${d.etfFlow >= 0 ? "+" : ""}${d.etfFlow.toFixed(1)}M USD, on-chain custodian net ${d.onChainUsd >= 0 ? "+" : ""}${d.onChainUsd.toFixed(1)}M USD, BTC ${d.priceChg >= 0 ? "+" : ""}${d.priceChg.toFixed(2)}% | news: ${d.headlines.join(" ; ") || "none"}`)
+      .join("\n");
+    return streamJson<TripleResult>(
+      "You are a crypto market-structure analyst. For each day you get three signals: reported ETF net flow, on-chain net movement of issuer/custodian wallets (Arkham labels), BTC price change, and news headlines. Classify each day: 'confirmed' = ETF flow direction matches on-chain movement (real settlement behind the reported flow); 'paper-disconnect' = ETF flow reported but on-chain wallets moved the opposite way or not at all (internal netting or timing gap); 'noise' = big news but no institutional flow either way (retail/derivatives-driven move); 'unclear' = mixed or insufficient data. verdict: 3-4 sentences on how often the three layers agreed and what that implies about market integrity. days: one entry per notable day (max 10), explanation max 30 words. Be honest about uncertainty; on-chain data lags and custodians net flows internally.",
+      `Daily data:\n${table}`,
+      "triple_verification", tripleSchema);
+  });
