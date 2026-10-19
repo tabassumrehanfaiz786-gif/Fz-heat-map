@@ -64,6 +64,7 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
           </p>
           {checked?.provider === s.etfProvider && <p className="text-xs text-muted-foreground">Last tested: {new Date(checked.at).toLocaleString()}</p>}
           <p className="text-xs text-muted-foreground">Get your key at {p?.where}. Save it as {p?.secret} in Lovable Cloud secrets. Only project editors can change it; visitors cannot view or overwrite it.</p>
+          <p className="text-xs text-muted-foreground">On-chain vault tracking (Vaults tab) uses Arkham Intelligence. Save your key as ARKHAM_API_KEY the same way; without it the tab shows clearly-labelled sample transfers.</p>
           <div className="flex flex-wrap gap-2">
             <Button asChild size="sm" variant="outline"><a href="https://lovable.dev/projects/5aa12fb1-55cb-4274-b4fe-ebe2e0e1095f?view=more&subview=cloud" target="_blank" rel="noreferrer"><ShieldCheck />Secure key settings<ExternalLink /></a></Button>
             <Button size="sm" variant="outline" disabled={status.isFetching} onClick={testConnection}><RefreshCw className={status.isFetching ? "animate-spin" : ""} />{status.isFetching ? "Testing…" : "Test saved API key"}</Button>
