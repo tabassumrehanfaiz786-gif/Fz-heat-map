@@ -11,9 +11,10 @@ const numeric = (x: unknown) => typeof x === "number" && Number.isFinite(x) && x
 export function parseRecentTransactions(input: unknown): LargeTransaction[] {
   if (!Array.isArray(input)) throw new Error("Bitcoin transaction data unavailable.");
   return input.flatMap((value) => {
-    const t = record(value), amount = numeric(t.value), fee = numeric(t.fee), vsize = numeric(t.vsize);
-    if (typeof t.txid !== "string" || !/^[a-f0-9]{64}$/.test(t.txid) || amount === null || fee === null || vsize === null) return [];
-    return [{ txid: t.txid, outputBtc: amount / 1e8, fee, vsize }];
+    const t = record(value), amount = numeric(t['value']), fee = numeric(t['fee']), vsize = numeric(t['vsize']);
+    const txid = t['txid'];
+    if (typeof txid !== "string" || !/^[a-f0-9]{64}$/.test(txid) || amount === null || fee === null || vsize === null) return [];
+    return [{ txid, outputBtc: amount / 1e8, fee, vsize }];
   });
 }
 
@@ -23,8 +24,8 @@ export function largeTransactions(transactions: LargeTransaction[], minimumBtc: 
 
 export function parseMempool(stats: unknown, fees: unknown, recent: unknown, fetchedAt: number): MempoolSnapshot {
   const s = record(stats), f = record(fees);
-  const count = numeric(s.count), vsize = numeric(s.vsize), totalFee = numeric(s.total_fee);
-  const fastestFee = numeric(f.fastestFee), halfHourFee = numeric(f.halfHourFee), hourFee = numeric(f.hourFee), economyFee = numeric(f.economyFee);
+  const count = numeric(s['count']), vsize = numeric(s['vsize']), totalFee = numeric(s['total_fee']);
+  const fastestFee = numeric(f['fastestFee']), halfHourFee = numeric(f['halfHourFee']), hourFee = numeric(f['hourFee']), economyFee = numeric(f['economyFee']);
   if (count === null || vsize === null || totalFee === null || fastestFee === null || halfHourFee === null || hourFee === null || economyFee === null) throw new Error("Bitcoin mempool data unavailable.");
   const transactions = parseRecentTransactions(recent);
   return { count, vsize, totalFeeBtc: totalFee / 1e8, fees: { fastestFee, halfHourFee, hourFee, economyFee }, transactions, sampled: transactions.length, fetchedAt };
