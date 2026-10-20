@@ -7,7 +7,7 @@ import { NewsFeed, newsQuery } from "@/components/NewsFeed";
 import { EtfDivergence } from "@/components/EtfDivergence";
 import { MacroCalendar } from "@/components/MacroCalendar";
 import { Surveillance } from "@/components/Surveillance";
-import { VaultTracker } from "@/components/VaultTracker";
+import { MempoolRadar } from "@/components/MempoolRadar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -57,7 +57,7 @@ function Index() {
               <TabsTrigger value="flows" className="flex-1">Flows 30D</TabsTrigger>
               <TabsTrigger value="calendar" className="flex-1">Calendar</TabsTrigger>
               <TabsTrigger value="algo" className="flex-1">Algo</TabsTrigger>
-              <TabsTrigger value="vaults" className="flex-1">Vaults</TabsTrigger>
+               <TabsTrigger value="vaults" className="flex-1">Chain</TabsTrigger>
             </TabsList>
             <TabsContent value="news" className="flex min-h-0 flex-1 flex-col">
               <Suspense fallback={<div className="panel flex-1" />}><NewsFeed /></Suspense>
@@ -72,7 +72,7 @@ function Index() {
               <ClientOnly fallback={<div className="panel flex-1" />}><Surveillance /></ClientOnly>
             </TabsContent>
             <TabsContent value="vaults" className="flex min-h-0 flex-1 flex-col">
-              <VaultTracker onConfigure={() => setOpen(true)} />
+               <MempoolRadar />
             </TabsContent>
           </Tabs>
         </aside>
