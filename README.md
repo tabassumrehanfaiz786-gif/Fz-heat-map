@@ -1,14 +1,18 @@
-# Welcome to your Lovable project
+# Heat Map Vista
+
+Build an app that looks like bookmap and has heat map but different color, it should have live btcusdt data connected,it should have bubbles candles, should have etf flow of big institutionsike black rock, it should have news feed of live btc and if possitive it should have in green color and if negative for btc them red color, name of the app should be Fz heatmap
 
 This project was built with [Lovable](https://lovable.dev).
 
+**Live app**: https://heat-map-vista.lovable.app
+
 ## Build with Lovable
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/5aa12fb1-55cb-4274-b4fe-ebe2e0e1095f).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
@@ -20,10 +24,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
