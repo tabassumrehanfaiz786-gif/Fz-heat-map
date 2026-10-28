@@ -4,7 +4,7 @@
 
 **© 2026 Faizan Rehan. All rights reserved. Proprietary; see [LICENSE](./LICENSE).**
 
-**Live application:** https://heat-map-vista.lovable.app
+**Live application:** https://fz-heatmap.lovable.app
 
 **Author and lead researcher:** Faizan Rehan, Advocate and Independent Legal & Financial Markets Researcher
 Contact: [faizan.tabassumrehan@gmail.com](mailto:faizan.tabassumrehan@gmail.com)
