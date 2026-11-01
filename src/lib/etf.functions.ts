@@ -53,7 +53,7 @@ async function publicFlows(): Promise<EtfResult> {
   const recent = snapshot.days.slice(-5);
   return {
     configured: true, provider: PUBLIC_ETF_SOURCE, sourceUrl: PUBLIC_ETF_URL,
-    fetchedAt: snapshot.fetchedAt, sourceUpdatedAt: null, date: last?.date, total: last?.total,
+    fetchedAt: snapshot.fetchedAt, sourceUpdatedAt: null, date: last?.date, total: last?.total ?? null,
     coverageDays: snapshot.days.length, missingDates: snapshot.missingDates,
     rows: snapshot.tickers.map((ticker) => ({ ticker, issuer: ISSUERS[ticker] ?? ticker,
       today: last?.flows[ticker] ?? null,
