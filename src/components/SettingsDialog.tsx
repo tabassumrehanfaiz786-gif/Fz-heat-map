@@ -11,6 +11,7 @@ import { ExternalLink, RefreshCw, ShieldCheck } from "lucide-react";
 import { issuerConnectionStatus } from "@/lib/coinglass-data";
 
 const PROVIDERS: { id: EtfProvider; name: string; secret: string; where: string }[] = [
+  { id: "public", name: "Bitbo (free)", secret: "", where: "bitbo.io/treasuries/etf-flows/" },
   { id: "coinglass", name: "CoinGlass", secret: "COINGLASS_API_KEY", where: "coinglass.com → API → your plan's API key" },
   { id: "sosovalue", name: "SoSoValue", secret: "SOSOVALUE_API_KEY", where: "sosovalue.com → Developer → API key" },
 ];
@@ -49,25 +50,25 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
 
         <section className="space-y-2">
           <h3 className="font-mono text-xs uppercase tracking-widest text-muted-foreground">ETF flow data provider</h3>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {PROVIDERS.map((x) => (
-              <button key={x.id} className={`btn-chip ${s.etfProvider === x.id ? "btn-chip-active" : ""}`} onClick={() => setSettings({ etfProvider: x.id })}>{x.name}</button>
+              <Button key={x.id} size="sm" variant={s.etfProvider === x.id ? "default" : "outline"} onClick={() => setSettings({ etfProvider: x.id })}>{x.name}</Button>
             ))}
           </div>
           <p role="status" aria-live="polite" className="text-xs text-muted-foreground">
             Status:{" "}
-            {status.isFetching ? "Testing saved key…" : connection === "connected" ? (
-              <span className="text-bull">Live issuer flows connected · {status.data?.rows.length} issuers{status.data?.date ? ` · latest flow ${status.data.date}` : ""}</span>
+            {status.isFetching ? s.etfProvider === "public" ? "Checking public source…" : "Testing saved key…" : connection === "connected" ? (
+              <span className="text-bull">Daily issuer data connected · {status.data?.rows.length} issuers{status.data?.date ? ` · latest flow ${status.data.date}` : ""}</span>
             ) : connection === "missing-key" ? <span className="text-bear">No saved API key found · live issuer flows not connected</span>
               : connection === "no-issuer-data" ? <span className="text-bear">Key configured, but no live issuer flows returned</span>
               : <span className="text-bear">Live issuer flows not connected · {status.data?.error ?? "Unable to check connection. Try again."}</span>}
           </p>
           {checked?.provider === s.etfProvider && <p className="text-xs text-muted-foreground">Last tested: {new Date(checked.at).toLocaleString()}</p>}
-          <p className="text-xs text-muted-foreground">Get your key at {p?.where}. Save it as {p?.secret} in Lovable Cloud secrets. Only project editors can change it; visitors cannot view or overwrite it.</p>
-           <p className="text-xs text-muted-foreground">The Chain tab uses free mempool.space data with no API key. Unlabelled Bitcoin transactions cannot identify institutions or OTC trades. Free public ETF tables are available at Farside; automated ETF access is not connected without a licensed provider.</p>
+          <p className="text-xs text-muted-foreground">{s.etfProvider === "public" ? "Free public Bitbo table · no API key. Values are estimates from BTC holdings changes, not confirmed issuer trades. Source publication time is unavailable." : <>Get your key at {p?.where}. Save it as {p?.secret} in Lovable Cloud secrets. Only project editors can change it; visitors cannot view or overwrite it.</>}</p>
+           <p className="text-xs text-muted-foreground">The Chain tab uses free mempool.space data with no API key. Unlabelled Bitcoin transactions cannot identify institutions or OTC trades. Bitbo provides a limited public daily ETF table; missing dates and figures are disclosed.</p>
           <div className="flex flex-wrap gap-2">
-            <Button asChild size="sm" variant="outline"><a href="https://lovable.dev/projects/5aa12fb1-55cb-4274-b4fe-ebe2e0e1095f?view=more&subview=cloud" target="_blank" rel="noreferrer"><ShieldCheck />Secure key settings<ExternalLink /></a></Button>
-            <Button size="sm" variant="outline" disabled={status.isFetching} onClick={testConnection}><RefreshCw className={status.isFetching ? "animate-spin" : ""} />{status.isFetching ? "Testing…" : "Test saved API key"}</Button>
+            {s.etfProvider !== "public" && <Button asChild size="sm" variant="outline"><a href="https://lovable.dev/projects/5aa12fb1-55cb-4274-b4fe-ebe2e0e1095f?view=more&subview=cloud" target="_blank" rel="noreferrer"><ShieldCheck />Secure key settings<ExternalLink /></a></Button>}
+            <Button size="sm" variant="outline" disabled={status.isFetching} onClick={testConnection}><RefreshCw className={status.isFetching ? "animate-spin" : ""} />{status.isFetching ? "Testing…" : s.etfProvider === "public" ? "Check public source" : "Test saved API key"}</Button>
           </div>
         </section>
 
