@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getEtfHistory, issuerName, type EtfDay } from "@/lib/etf.functions";
@@ -7,28 +8,6 @@ import { getBtcNewsHistory } from "@/lib/news.functions";
 import { normalizeHistoricalNews } from "@/lib/news-history";
 import { useSettings } from "@/lib/settings";
 import { exportDivergencePdf } from "@/lib/report-pdf";
-
-const TOP = ["IBIT", "FBTC", "GBTC", "ARKB", "BITB", "BTC", "HODL", "BRRR", "EZBC", "BTCO"];
-const BASE: Record<string, number> = { IBIT: 90, FBTC: 30, GBTC: -15, ARKB: 8, BITB: 6, BTC: 4, HODL: 2, BRRR: 1, EZBC: 0.8, BTCO: 0.5 };
-
-// Deterministic illustrative history, used only until the CoinGlass key is added.
-function sampleDays(): EtfDay[] {
-  const out: EtfDay[] = [];
-  const d = new Date();
-  d.setUTCHours(0, 0, 0, 0);
-  while (out.length < 30) {
-    d.setUTCDate(d.getUTCDate() - 1);
-    if (d.getUTCDay() === 0 || d.getUTCDay() === 6) continue;
-    const seed = d.getTime() / 86400000;
-    const flows: Record<string, number> = {};
-    TOP.forEach((t, i) => {
-      const w = Math.sin(seed * (1.3 + i * 0.17)) + Math.cos(seed * 0.7 + i);
-      flows[t] = +(BASE[t]! * (1 + w * 2.2)).toFixed(1);
-    });
-    out.unshift({ date: d.toISOString().slice(0, 10), total: Object.values(flows).reduce((a, b) => a + b, 0), flows });
-  }
-  return out;
-}
 
 const bizDaysBetween = (a: string, b: string) => {
   let n = 0;
@@ -56,9 +35,9 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
   const newsHistory = useQuery({ queryKey: ["btc-news-history", 30], queryFn: () => getBtcNewsHistory(), staleTime: 600_000, refetchInterval: 600_000 });
   const headlines = useMemo(() => normalizeHistoricalNews([...(newsHistory.data?.items ?? []), ...(news.data ?? [])], Date.now()), [newsHistory.data, news.data]);
   const live = !!hist.data?.configured && !hist.data.error && hist.data.days.length > 0;
-  const days = useMemo(() => (live ? hist.data!.days : sampleDays()), [live, hist.data]);
-  const source = live ? hist.data!.provider : "Sample data";
-  const updated = live && hist.data!.fetchedAt ? new Date(hist.data!.fetchedAt).toLocaleString() : "—";
+  const days = useMemo(() => live ? (hist.data?.days ?? []) : [], [live, hist.data]);
+  const source = hist.data?.provider ?? "Checking source";
+  const updated = hist.data?.fetchedAt ? new Date(hist.data.fetchedAt).toLocaleString() : "—";
   const latestDate = days[days.length - 1]?.date ?? "";
 
   // news by day
@@ -79,7 +58,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
     for (const d of days) for (const [t, v] of Object.entries(d.flows)) {
       const r = m.get(t) ?? { inflow: 0, outflow: 0, lastDate: null, missingLatest: true };
       if (v >= 0) r.inflow += v; else r.outflow += v;
-      if (v !== 0 || d.date === latestDate) r.lastDate = d.date;
+      r.lastDate = d.date;
       m.set(t, r);
     }
     const last = days[days.length - 1];
@@ -103,7 +82,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
       conflict: news !== 0 && Math.abs(d.total) > 5 && news !== Math.sign(d.total),
     };
   });
-  const withPrice = rows.filter((r) => r.priceChg != null);
+  const withPrice = rows.filter((r) => r.priceChg != null && !hist.data?.incompleteDates?.includes(r.date));
   const div = withPrice.filter((r) => r.diverged);
   const fmax = Math.max(1, ...rows.map((r) => Math.abs(r.total)));
   const pmax = Math.max(0.5, ...withPrice.map((r) => Math.abs(r.priceChg!)));
@@ -117,7 +96,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
     setExporting(true);
     try {
       await exportDivergencePdf({
-        source, updated, rows, issuers, ai: ai.data,
+        source, updated, rows, issuers, ai: ai.data, disclosure: etfProvider === "public" ? `Holdings-based estimates. Source publication time unavailable. Partial 30-day coverage: ${hist.data?.coverageDays ?? 0} reports. Unreported weekdays: ${hist.data?.missingDates?.join(", ") || "none"}. Incomplete dates: ${hist.data?.incompleteDates?.join(", ") || "none"}.` : undefined,
         headlines: headlines.map((n) => ({ date: new Date(n.publishedAt).toISOString().slice(0, 10), title: n.title, tone: n.sentiment })),
       });
     } finally { setExporting(false); }
@@ -132,9 +111,12 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
         <span className="font-mono text-[11px]"><span className="text-bull">+{totalIn.toFixed(0)}M</span> / <span className="text-bear">{totalOut.toFixed(0)}M</span></span>
       </div>
       <p className="mb-3 text-[10px] text-muted-foreground">
-        Source: <b className="text-foreground">{source}</b> · updated {updated}
+        Source: {hist.data?.sourceUrl ? <a href={hist.data.sourceUrl} target="_blank" rel="noreferrer" className="text-primary underline">{source}</a> : <b className="text-foreground">{source}</b>} · checked {updated}
         {live && latestDate && <> · latest day {latestDate}{feedStale && <span className="flag flag-stale ml-1">stale</span>}</>}
-        {!live && <> · {hist.data?.error ? `${hist.data.error}. ` : ""}<button onClick={onConfigure} className="text-primary underline underline-offset-2">Configure CoinGlass</button></>}
+        {!live && <> · {hist.isPending ? "Checking ETF source…" : hist.data?.error ?? "ETF data unavailable. No sample figures shown."}<Button onClick={onConfigure} variant="link" size="sm">Provider settings</Button></>}
+        {etfProvider === "public" && <span className="block">Source update time: not published. Holdings-based estimates, not confirmed purchases or sales. {hist.data?.coverageDays ?? 0} available daily reports in the 30-day window; totals cover available data only.</span>}
+        {!!hist.data?.missingDates?.length && <span className="block text-conflict">Unreported weekdays (including possible holidays): {hist.data.missingDates.join(", ")}</span>}
+        {!!hist.data?.incompleteDates?.length && <span className="block text-conflict">Missing issuer figures or totals: {hist.data.incompleteDates.join(", ")}. Excluded from AI comparison.</span>}
       </p>
 
       <h3 className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Top 10 issuers · outflow | inflow</h3>
@@ -151,7 +133,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
                 <div className={`text-right font-mono text-[10px] ${i.net >= 0 ? "text-bull" : "text-bear"}`}>{i.net >= 0 ? "+" : ""}{i.net.toFixed(0)}M</div>
               </div>
               <div className="mt-0.5 font-mono text-[9px] text-muted-foreground">
-                {live ? hist.data!.provider : "sample"} · last value {i.lastDate ?? "—"}
+                {source} · last value {i.lastDate ?? "—"}
                 {i.status !== "ok" && <span className={`flag flag-${i.status} ml-1`}>{i.status}</span>}
               </div>
             </li>
@@ -203,7 +185,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
 
       <div className="mb-3 rounded-md bg-secondary p-3">
         <div className="font-mono text-xs text-foreground">
-          {withPrice.length ? <>Price disagreed with flows on <b className="text-wall">{div.length} of {withPrice.length}</b> days · news conflicted on <b className="text-conflict">{rows.filter((r) => r.conflict).length}</b></> : "Loading price data…"}
+          {withPrice.length ? <>Price disagreed with flows on <b className="text-wall">{div.length} of {withPrice.length}</b> days · news conflicted on <b className="text-conflict">{rows.filter((r) => r.conflict).length}</b></> : live ? "Price data unavailable." : "No ETF data available for comparison."}
         </div>
         <ul className="mt-2 space-y-1">
           {rows.filter((r) => r.diverged || r.conflict).slice(-6).reverse().map((r) => (
@@ -217,10 +199,10 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
       </div>
 
       <div className="mb-2 flex flex-wrap gap-2">
-        <button className="btn-chip btn-chip-active" disabled={ai.isPending || !withPrice.length} onClick={() => ai.mutate()}>
+        <Button size="sm" disabled={ai.isPending || !withPrice.length} onClick={() => ai.mutate()}>
           {ai.isPending ? "Analyzing…" : "AI: why flows & news didn't match"}
-        </button>
-        <button className="btn-chip" disabled={exporting} onClick={exportPdf}>{exporting ? "Building PDF…" : "Export PDF"}</button>
+        </Button>
+        <Button size="sm" variant="outline" disabled={exporting || !rows.length} onClick={exportPdf}>{exporting ? "Building PDF…" : "Export PDF"}</Button>
       </div>
       {ai.error && <p role="alert" className="text-xs text-bear">{(ai.error as Error).message}</p>}
       {ai.data && (

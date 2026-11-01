@@ -4,7 +4,7 @@ export type ReportRow = { date: string; total: number; priceChg: number | null; 
 export type ReportIssuer = { t: string; name: string; inflow: number; outflow: number; net: number; lastDate: string | null; status: string };
 
 export async function exportDivergencePdf(opts: {
-  source: string; updated: string; rows: ReportRow[]; issuers: ReportIssuer[]; ai: DivergenceResult | undefined; headlines: { date: string; title: string; tone: string }[];
+  source: string; updated: string; disclosure?: string | undefined; rows: ReportRow[]; issuers: ReportIssuer[]; ai: DivergenceResult | undefined; headlines: { date: string; title: string; tone: string }[];
 }) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -21,6 +21,7 @@ export async function exportDivergencePdf(opts: {
 
   text("Fz Heatmap — 30-day ETF flow & news divergence report", 16, true);
   text(`Source: ${opts.source} · Data updated: ${opts.updated} · Generated: ${new Date().toUTCString()}`, 8, false, GREY);
+  if (opts.disclosure) text(opts.disclosure, 8, false, GREY);
   y += 8;
 
   const withP = opts.rows.filter((r) => r.priceChg != null);

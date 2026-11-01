@@ -1,13 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { fetchCoinGlassDays } from "./coinglass.server";
+import { fetchPublicEtf } from "./public-etf.server";
+import { PUBLIC_ETF_SOURCE, PUBLIC_ETF_URL } from "./public-etf";
 
-export type EtfRow = { ticker: string; issuer: string; today: number; week: number };
-export type EtfResult = { configured: boolean; provider: string; rows: EtfRow[]; date?: string | undefined; error?: string | undefined };
+export type EtfRow = { ticker: string; issuer: string; today: number | null; week: number; missingDays?: number };
+type PublicMetadata = { sourceUrl?: string; fetchedAt?: number; sourceUpdatedAt?: null; missingDates?: string[]; incompleteDates?: string[]; coverageDays?: number };
+export type EtfResult = PublicMetadata & { configured: boolean; provider: string; rows: EtfRow[]; total?: number | null; date?: string | undefined; error?: string | undefined };
 
 const ISSUERS: Record<string, string> = {
   IBIT: "BlackRock", FBTC: "Fidelity", GBTC: "Grayscale", BTC: "Grayscale Mini", ARKB: "ARK 21Shares",
   BITB: "Bitwise", HODL: "VanEck", BRRR: "Valkyrie/CoinShares", EZBC: "Franklin", BTCO: "Invesco Galaxy",
-  BTCW: "WisdomTree", MSBT: "Morgan Stanley", DEFI: "Hashdex",
+  BTCW: "WisdomTree", MSBT: "Morgan Stanley", DEFI: "Hashdex", BITA: "Bitwise (BITA)",
 };
 
 async function coinglass(key: string): Promise<EtfResult> {
@@ -42,10 +45,29 @@ async function sosovalue(key: string): Promise<EtfResult> {
   return { configured: true, provider: "SoSoValue", rows: rows.sort((a, b) => Math.abs(b.today) - Math.abs(a.today)), date: list[0]?.dailyNetInflow?.lastUpdateDate };
 }
 
+const providerInput = (input: { provider: string }) => ({ provider: input?.provider === "sosovalue" ? "sosovalue" : input?.provider === "coinglass" ? "coinglass" : "public" });
+
+async function publicFlows(): Promise<EtfResult> {
+  const snapshot = await fetchPublicEtf();
+  const last = snapshot.days.at(-1);
+  const recent = snapshot.days.slice(-5);
+  return {
+    configured: true, provider: PUBLIC_ETF_SOURCE, sourceUrl: PUBLIC_ETF_URL,
+    fetchedAt: snapshot.fetchedAt, sourceUpdatedAt: null, date: last?.date, total: last?.total ?? null,
+    coverageDays: snapshot.days.length, missingDates: snapshot.missingDates,
+    rows: snapshot.tickers.map((ticker) => ({ ticker, issuer: ISSUERS[ticker] ?? ticker,
+      today: last?.flows[ticker] ?? null,
+      week: recent.reduce((sum, day) => sum + (day.flows[ticker] ?? 0), 0),
+      missingDays: recent.filter((day) => !(ticker in day.flows)).length,
+    })).sort((a, b) => Math.abs(b.week) - Math.abs(a.week)),
+  };
+}
+
 export const getEtfFlows = createServerFn({ method: "GET" })
-  .inputValidator((input: { provider: string }) => ({ provider: input?.provider === "sosovalue" ? "sosovalue" : "coinglass" }))
+  .inputValidator(providerInput)
   .handler(async ({ data }): Promise<EtfResult> => {
     try {
+      if (data.provider === "public") return await publicFlows();
       if (data.provider === "sosovalue") {
         const k = process.env['SOSOVALUE_API_KEY'];
         return k ? await sosovalue(k) : { configured: false, provider: "SoSoValue", rows: [] };
@@ -53,17 +75,26 @@ export const getEtfFlows = createServerFn({ method: "GET" })
       const k = process.env['COINGLASS_API_KEY'];
       return k ? await coinglass(k) : { configured: false, provider: "CoinGlass", rows: [] };
     } catch (e) {
+      if (data.provider === "public") return { configured: true, provider: PUBLIC_ETF_SOURCE, sourceUrl: PUBLIC_ETF_URL, rows: [], error: e instanceof Error ? e.message : "Public ETF source unavailable. No sample figures shown." };
       return { configured: true, provider: data.provider, rows: [], error: data.provider === "coinglass" ? "CoinGlass connection failed. Check your key, ETF plan access, or try again later." : "ETF provider connection failed. Try again later." };
     }
   });
 
 export type EtfDay = { date: string; total: number; flows: Record<string, number> };
-export type EtfHistory = { configured: boolean; provider: string; days: EtfDay[]; error?: string | undefined; fetchedAt?: number | undefined };
+export type EtfHistory = PublicMetadata & { configured: boolean; provider: string; days: EtfDay[]; error?: string | undefined };
 
 export const getEtfHistory = createServerFn({ method: "GET" })
-  .inputValidator((input: { provider: string }) => ({ provider: input?.provider === "sosovalue" ? "sosovalue" : "coinglass" }))
+  .inputValidator(providerInput)
   .handler(async ({ data }): Promise<EtfHistory> => {
     try {
+      if (data.provider === "public") {
+        const snapshot = await fetchPublicEtf();
+        return { configured: true, provider: PUBLIC_ETF_SOURCE, sourceUrl: PUBLIC_ETF_URL,
+          fetchedAt: snapshot.fetchedAt, sourceUpdatedAt: null, coverageDays: snapshot.days.length,
+          missingDates: snapshot.missingDates, incompleteDates: snapshot.days.filter((day) => day.total === null || day.missing.length > 0).map((day) => day.date),
+          days: snapshot.days.flatMap((day) => day.total === null ? [] : [{ date: day.date, total: day.total, flows: day.flows }]),
+        };
+      }
       if (data.provider === "sosovalue") {
         const k = process.env['SOSOVALUE_API_KEY'];
         if (!k) return { configured: false, provider: "SoSoValue", days: [] };
@@ -81,6 +112,7 @@ export const getEtfHistory = createServerFn({ method: "GET" })
       const days = await fetchCoinGlassDays(k);
       return { configured: true, provider: "CoinGlass", days, fetchedAt: Date.now() };
     } catch (e) {
+      if (data.provider === "public") return { configured: true, provider: PUBLIC_ETF_SOURCE, sourceUrl: PUBLIC_ETF_URL, days: [], error: e instanceof Error ? e.message : "Public ETF source unavailable. No sample figures shown." };
       return { configured: true, provider: data.provider, days: [], error: "ETF history connection failed. Check your key, plan access, or try again later." };
     }
   });

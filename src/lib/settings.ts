@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-export type EtfProvider = "coinglass" | "sosovalue";
+export type EtfProvider = "public" | "coinglass" | "sosovalue";
 export type Settings = {
   etfProvider: EtfProvider;
   alertsOn: boolean;
@@ -13,7 +13,7 @@ export type Settings = {
 };
 
 export const DEFAULT_SETTINGS: Settings = {
-  etfProvider: "coinglass",
+  etfProvider: "public",
   alertsOn: true,
   alertBuy: true,
   alertSell: true,
