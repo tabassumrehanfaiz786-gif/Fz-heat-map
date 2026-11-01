@@ -1,7 +1,35 @@
 import { useQuery } from "@tanstack/react-query";
-import { getEtfFlows } from "@/lib/etf.functions";
+import { getEtfFlows, getEtfHistory } from "@/lib/etf.functions";
 import { useSettings } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
+
+function TenDayChart({ provider }: { provider: string }) {
+  const q = useQuery({ queryKey: ["etf-history-10d", provider], queryFn: () => getEtfHistory({ data: { provider } }), refetchInterval: 300_000 });
+  const days = (q.data?.days ?? []).slice(-10);
+  if (q.isPending) return <p className="mt-3 text-[10px] text-muted-foreground">Loading 10-day net flows…</p>;
+  if (!days.length) return null;
+  const max = Math.max(1, ...days.map((d) => Math.abs(d.total)));
+  return (
+    <div className="mt-3">
+      <div className="mb-1 flex items-baseline justify-between">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Net flows · last {days.length} days ($M)</span>
+        <span className="text-[9px] text-muted-foreground"><span className="text-bull">■</span> inflow <span className="text-bear">■</span> outflow</span>
+      </div>
+      <div className="flex items-end gap-1">
+        {days.map((d) => {
+          const h = Math.max(2, (Math.abs(d.total) / max) * 72);
+          return (
+            <div key={d.date} className="flex min-w-0 flex-1 flex-col items-center gap-0.5" title={`${d.date}: ${d.total >= 0 ? "+" : ""}$${d.total.toFixed(1)}M`}>
+              <span className={`font-mono text-[8px] leading-none ${d.total >= 0 ? "text-bull" : "text-bear"}`}>{d.total >= 0 ? "+" : ""}{d.total.toFixed(0)}</span>
+              <div className={`w-full rounded-sm ${d.total >= 0 ? "bg-bull" : "bg-bear"}`} style={{ height: `${h}px` }} />
+              <span className="font-mono text-[8px] leading-none text-muted-foreground">{d.date.slice(5)}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export function EtfFlows({ onConfigure }: { onConfigure: () => void }) {
   const { etfProvider } = useSettings();
@@ -30,6 +58,7 @@ export function EtfFlows({ onConfigure }: { onConfigure: () => void }) {
           </li>
         ))}
       </ul>
+      {live && <TenDayChart provider={etfProvider} />}
       <p className="mt-3 text-[10px] text-muted-foreground">
         {live ? (
            <>Source: {q.data?.sourceUrl ? <a href={q.data.sourceUrl} target="_blank" rel="noreferrer" className="text-primary underline">{q.data.provider}</a> : q.data?.provider} · Reported day: {q.data?.date ?? "missing"}. Bar = last 5 available reports.
