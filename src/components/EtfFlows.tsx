@@ -58,6 +58,7 @@ export function EtfFlows({ onConfigure }: { onConfigure: () => void }) {
           </li>
         ))}
       </ul>
+      {live && <TenDayChart provider={etfProvider} />}
       <p className="mt-3 text-[10px] text-muted-foreground">
         {live ? (
            <>Source: {q.data?.sourceUrl ? <a href={q.data.sourceUrl} target="_blank" rel="noreferrer" className="text-primary underline">{q.data.provider}</a> : q.data?.provider} · Reported day: {q.data?.date ?? "missing"}. Bar = last 5 available reports.
