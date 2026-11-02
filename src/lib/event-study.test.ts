@@ -18,7 +18,7 @@ describe("event study", () => {
     expect(ev[0]!.side).toBe("buy");
   });
   it("scores sell events as hits when price falls", () => {
-    const s = summarize(findEvents(days, closes, "TOTAL", 5), [2]);
+    const s = summarize(findEvents(days, closes, "TOTAL", 5, [2]), [2]);
     expect(s[0]).toMatchObject({ n: 1, hitRate: 1 });
     expect(s[0]!.avg).toBeCloseTo(100 * (20 / 110));
   });
