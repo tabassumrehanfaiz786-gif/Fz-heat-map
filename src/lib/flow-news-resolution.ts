@@ -9,7 +9,7 @@ export function forwardReturn(rows: ResolutionRow[], i: number, h: number): numb
   if (i + h >= rows.length) return null;
   let g = 1;
   for (let k = i + 1; k <= i + h; k++) {
-    const p = rows[k].priceChg;
+    const p = rows[k]?.priceChg;
     if (p == null) return null;
     g *= 1 + p / 100;
   }
