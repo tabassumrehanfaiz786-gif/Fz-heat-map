@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useMemo, useState } from "react";
+import { resolveConflicts } from "@/lib/flow-news-resolution";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getEtfHistory, issuerName, type EtfDay } from "@/lib/etf.functions";
 import { analyzeDivergence } from "@/lib/ai.functions";
@@ -83,6 +84,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
     };
   });
   const withPrice = rows.filter((r) => r.priceChg != null && !hist.data?.incompleteDates?.includes(r.date));
+  const resolution = resolveConflicts(rows.filter((r) => !hist.data?.incompleteDates?.includes(r.date)));
   const div = withPrice.filter((r) => r.diverged);
   const fmax = Math.max(1, ...rows.map((r) => Math.abs(r.total)));
   const pmax = Math.max(0.5, ...withPrice.map((r) => Math.abs(r.priceChg!)));
@@ -140,6 +142,25 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
           ))}
         </ul>
       )}
+
+      <h3 className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Who won? · flow vs news on conflict days</h3>
+      <div className="mb-2 grid grid-cols-3 gap-2">
+        {resolution.map((h) => {
+          const n = h.events;
+          const fp = n ? Math.round((h.flowWins / n) * 100) : 0, np = n ? Math.round((h.newsWins / n) * 100) : 0;
+          return (
+            <div key={h.horizon} className="rounded-md border border-border bg-muted/40 p-2">
+              <div className="font-mono text-[9px] uppercase text-muted-foreground">+{h.horizon} day{h.horizon > 1 ? "s" : ""} · n={n}</div>
+              {n === 0 ? <div className="mt-1 text-[10px] text-muted-foreground">No resolvable events</div> : <>
+                <div className="mt-1 font-mono text-[11px] text-bull">Flow {fp}%</div>
+                <div className="font-mono text-[11px] text-bear">News {np}%</div>
+                <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-muted"><div className="bg-bull" style={{ width: `${fp}%` }} /><div className="bg-bear" style={{ width: `${np}%` }} /></div>
+              </>}
+            </div>
+          );
+        })}
+      </div>
+      <p className="mb-4 text-[9px] text-muted-foreground">Conflict day: daily ETF net flow beyond ±$5M and keyword news sentiment point opposite ways. Winner = side whose direction matches the compounded BTC return over the next 1–3 reported days. Small sample, keyword sentiment and holdings-based flow estimates; descriptive only, not causal or predictive evidence.</p>
 
       <h3 className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Timeline · flows, price & news</h3>
       <p className="mb-2 text-[10px] text-muted-foreground" aria-live="polite">
