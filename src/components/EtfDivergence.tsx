@@ -9,6 +9,7 @@ import { getBtcNewsHistory } from "@/lib/news.functions";
 import { normalizeHistoricalNews } from "@/lib/news-history";
 import { useSettings } from "@/lib/settings";
 import { exportDivergencePdf } from "@/lib/report-pdf";
+import { EventStudy } from "@/components/EventStudy";
 
 const bizDaysBetween = (a: string, b: string) => {
   let n = 0;
@@ -161,6 +162,8 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
         })}
       </div>
       <p className="mb-4 text-[9px] text-muted-foreground">Conflict day: daily ETF net flow beyond ±$5M and keyword news sentiment point opposite ways. Winner = side whose direction matches the compounded BTC return over the next 1–3 reported days. Small sample, keyword sentiment and holdings-based flow estimates; descriptive only, not causal or predictive evidence.</p>
+
+      {live && <EventStudy days={days} excluded={hist.data?.incompleteDates ?? []} onPick={setSel} />}
 
       <h3 className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Timeline · flows, price & news</h3>
       <p className="mb-2 text-[10px] text-muted-foreground" aria-live="polite">
