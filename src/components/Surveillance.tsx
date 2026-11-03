@@ -4,72 +4,188 @@ import { IcebergDetector, detectTwap, liquidityAsymmetry, type IcebergEvent, typ
 const fmt = (n: number, d = 2) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 const ago = (t: number) => `${Math.max(0, Math.round((Date.now() - t) / 1000))}s ago`;
 
+type Status = "connecting" | "live" | "rest" | "reconnecting" | "offline";
+
 export function Surveillance() {
   const [ice, setIce] = useState<IcebergEvent[]>([]);
   const [twap, setTwap] = useState<TwapEvent[]>([]);
-  const [status, setStatus] = useState("connecting");
+  const [status, setStatus] = useState<Status>("connecting");
+  const [blocked, setBlocked] = useState(false);
   const det = useRef(new IcebergDetector(1, 0.5));
   const trades = useRef<Trade[]>([]);
   const bids = useRef(new Map<number, number>());
   const asks = useRef(new Map<number, number>());
+  const [, forceTick] = useState(0);
 
   useEffect(() => {
-    const URLS = [
+    const WS_URLS = [
       "wss://data-stream.binance.vision/stream?streams=btcusdt@aggTrade/btcusdt@depth20@100ms",
       "wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/btcusdt@depth20@100ms",
       "wss://stream.binance.com:443/stream?streams=btcusdt@aggTrade/btcusdt@depth20@100ms",
     ];
+    const REST_BASES = ["https://data-api.binance.vision", "https://api.binance.com"];
+
     let ws: WebSocket | null = null;
-    let alive = true, attempt = 0, retry: ReturnType<typeof setTimeout> | undefined;
+    let alive = true;
+    let attempt = 0;
+    let restBase = 0;
+    let lastAggId = 0;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let restTimer: ReturnType<typeof setInterval> | undefined;
+
+    const processTrade = (t: Trade) => {
+      const book = t.side === "sell" ? bids.current : asks.current;
+      const lvl = Math.round(t.price);
+      let vis = 0;
+      for (const [p, q] of book) if (Math.round(p) === lvl) vis += q;
+      det.current.onTrade(t, vis);
+      trades.current.push(t);
+      const cut = Date.now() - 10 * 60_000;
+      if (trades.current.length > 20000 || (trades.current[0] && trades.current[0].time < cut)) {
+        trades.current = trades.current.filter((x) => x.time >= cut).slice(-20000);
+      }
+    };
+
+    const aggRows = (rows: string[][]) => {
+      const m = new Map<number, number>();
+      for (const [p = "0", q = "0"] of rows) {
+        const k = Math.round(+p);
+        m.set(k, (m.get(k) ?? 0) + +q);
+      }
+      return m;
+    };
+
+    const processBook = (raw: { bids?: string[][]; asks?: string[][] }) => {
+      bids.current = aggRows(raw.bids ?? []);
+      asks.current = aggRows(raw.asks ?? []);
+      det.current.onBook(bids.current, asks.current, Date.now());
+    };
+
+    // REST fallback: works when WebSocket connections are blocked by the network.
+    const restPoll = async () => {
+      if (!alive) return;
+      try {
+        const base = REST_BASES[restBase % REST_BASES.length]!;
+        const [trRes, deRes] = await Promise.all([
+          fetch(`${base}/api/v3/aggTrades?symbol=BTCUSDT&limit=100`),
+          fetch(`${base}/api/v3/depth?symbol=BTCUSDT&limit=20`),
+        ]);
+        if (!trRes.ok || !deRes.ok) throw new Error(`http ${trRes.status}/${deRes.status}`);
+        const td = (await trRes.json()) as Array<{ a: number; p: string; q: string; T: number; m: boolean }>;
+        const dd = (await deRes.json()) as { bids: string[][]; asks: string[][] };
+        for (const d of td) {
+          if (d.a <= lastAggId) continue;
+          lastAggId = d.a;
+          processTrade({ price: +d.p, qty: +d.q, time: d.T, side: d.m ? "sell" : "buy" });
+        }
+        processBook(dd);
+        setBlocked(false);
+        setStatus((s) => (s === "live" ? s : "rest"));
+      } catch {
+        restBase++;
+        setStatus((s) => (s === "live" ? s : "offline"));
+        setBlocked(true);
+      }
+    };
+
+    const startRest = () => {
+      if (restTimer || !alive) return;
+      void restPoll();
+      restTimer = setInterval(() => void restPoll(), 3000);
+    };
+    const stopRest = () => {
+      if (restTimer) clearInterval(restTimer);
+      restTimer = undefined;
+    };
+
     const connect = () => {
       if (!alive) return;
-      const sock = new WebSocket(URLS[attempt % URLS.length]!);
+      const sock = new WebSocket(WS_URLS[attempt % WS_URLS.length]!);
       ws = sock;
-      sock.onopen = () => { attempt = 0; setStatus("live"); };
+      sock.onopen = () => {
+        attempt = 0;
+        stopRest();
+        setStatus("live");
+      };
       sock.onclose = () => {
         if (!alive) return;
         attempt++;
-        setStatus("reconnecting");
-        retry = setTimeout(connect, Math.min(15000, 1000 * 2 ** Math.min(attempt, 4)));
+        setStatus((s) => (s === "live" ? "reconnecting" : s === "live" ? s : "reconnecting"));
+        if (attempt >= 2) startRest();
+        retry = setTimeout(connect, Math.min(30000, 1000 * 2 ** Math.min(attempt, 5)));
       };
       sock.onerror = () => sock.close();
       sock.onmessage = onMsg;
     };
+
     const onMsg = (m: MessageEvent) => {
       const { stream, data } = JSON.parse(m.data);
       if (stream.endsWith("aggTrade")) {
-        const t: Trade = { price: +data.p, qty: +data.q, time: data.T, side: data.m ? "sell" : "buy" };
-        const book = t.side === "sell" ? bids.current : asks.current;
-        const lvl = Math.round(t.price);
-        let vis = 0; for (const [p, q] of book) if (Math.round(p) === lvl) vis += q;
-        det.current.onTrade(t, vis);
-        trades.current.push(t);
-        const cut = Date.now() - 10 * 60_000;
-        if (trades.current.length > 20000 || trades.current[0]!.time < cut) trades.current = trades.current.filter((x) => x.time >= cut).slice(-20000);
+        processTrade({ price: +data.p, qty: +data.q, time: data.T, side: data.m ? "sell" : "buy" });
       } else {
-        const agg = (rows: string[][]) => { const m = new Map<number, number>(); for (const [p = "0", q = "0"] of rows) { const k = Math.round(+p); m.set(k, (m.get(k) ?? 0) + +q); } return m; };
-        bids.current = agg(data.bids); asks.current = agg(data.asks);
-        det.current.onBook(bids.current, asks.current, Date.now());
+        processBook(data);
       }
     };
+
     const id = setInterval(() => {
       setIce(det.current.events(Date.now()).slice(0, 20));
       setTwap(detectTwap(trades.current.filter((t) => t.qty >= 0.05)).slice(0, 10));
+      forceTick((n) => n + 1);
     }, 2000);
+
     connect();
-    const wake = () => { if (document.visibilityState === "visible" && ws && ws.readyState > 1) { clearTimeout(retry); attempt = 0; connect(); } };
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setBlocked(true);
+      startRest();
+    }
+
+    const wake = () => {
+      if (document.visibilityState === "visible" && ws && ws.readyState > 1) {
+        clearTimeout(retry);
+        attempt = 0;
+        connect();
+      }
+    };
     document.addEventListener("visibilitychange", wake);
     window.addEventListener("online", wake);
-    return () => { alive = false; clearTimeout(retry); clearInterval(id); document.removeEventListener("visibilitychange", wake); window.removeEventListener("online", wake); ws?.close(); };
+    return () => {
+      alive = false;
+      clearTimeout(retry);
+      stopRest();
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", wake);
+      window.removeEventListener("online", wake);
+      ws?.close();
+    };
   }, []);
+
+  const manualRetry = () => {
+    setBlocked(false);
+    forceTick((n) => n + 1);
+    window.location.reload();
+  };
 
   const asym = liquidityAsymmetry(ice);
   return (
     <div className="panel flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 text-xs">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-sm font-semibold">Algo Surveillance</h2>
-        <span className={status === "live" ? "text-bull" : "text-bear"}>● {status}</span>
+        <span className={status === "live" ? "text-bull" : status === "rest" ? "text-muted-foreground" : "text-bear"}>
+          ● {status === "rest" ? "live (rest)" : status}
+        </span>
       </div>
+
+      {blocked && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2">
+          <p className="font-semibold text-destructive">Live exchange data is blocked on this network</p>
+          <p className="mt-1 text-muted-foreground">
+            Exchange streams are unreachable from your connection, so detections cannot update. Try another network
+            (mobile data), disable a VPN/ad-blocker for this site, or retry.
+          </p>
+          <button className="btn-chip mt-2" onClick={manualRetry}>Retry connection</button>
+        </div>
+      )}
+
       <div className="rounded-md border border-border p-2">
         <div className="mb-1 flex justify-between text-muted-foreground"><span>Hidden liquidity asymmetry</span><span className={asym >= 0 ? "text-bull" : "text-bear"}>{fmt(asym * 100, 0)}%</span></div>
         <div className="relative h-2 rounded bg-muted"><div className="absolute top-0 h-2 w-1 rounded bg-primary" style={{ left: `${(asym + 1) * 50}%` }} /></div>
