@@ -110,7 +110,7 @@ export function Surveillance() {
       sock.onclose = () => {
         if (!alive) return;
         attempt++;
-        setStatus((s) => (s === "live" ? "reconnecting" : s === "live" ? s : "reconnecting"));
+        setStatus((s) => (s === "live" ? "reconnecting" : s));
         if (attempt >= 2) startRest();
         retry = setTimeout(connect, Math.min(30000, 1000 * 2 ** Math.min(attempt, 5)));
       };
