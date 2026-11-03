@@ -18,7 +18,7 @@ const bizDaysBetween = (a: string, b: string) => {
   return n;
 };
 
-export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
+export function EtfDivergence({ onConfigure, view = "flows" }: { onConfigure: () => void; view?: "flows" | "events" }) {
   const { etfProvider } = useSettings();
   const [sel, setSel] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -107,6 +107,30 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
 
   const W = 320, H = 150, TOPH = 18, CH = H - TOPH, bw = W / Math.max(1, rows.length), mid = TOPH + CH / 2;
   const selRow = rows.find((r) => r.date === sel);
+  const dayCard = (<>
+      {selRow && (
+        <div className="mb-3 rounded-md bg-secondary p-2 text-[11px]">
+          <div className="font-mono text-foreground">{selRow.date}: <span className={selRow.total >= 0 ? "text-bull" : "text-bear"}>{selRow.total >= 0 ? "+" : ""}{selRow.total.toFixed(0)}M</span>
+            {selRow.priceChg != null && <> · BTC <span className={selRow.priceChg >= 0 ? "text-bull" : "text-bear"}>{selRow.priceChg.toFixed(2)}%</span></>}
+            {selRow.conflict && <span className="flag flag-conflict ml-1">news ≠ flow</span>}
+          </div>
+          <ul className="mt-1 space-y-1">
+            {(newsByDay.get(selRow.date)?.items ?? []).slice(0, 5).map((n) => (
+              <li key={n.url}><a href={n.url} target="_blank" rel="noreferrer" className={n.tone === "positive" ? "text-bull" : n.tone === "negative" ? "text-bear" : "text-foreground"}>{n.title}</a></li>
+            ))}
+            {!newsByDay.get(selRow.date) && <li className="text-muted-foreground">{newsHistory.isPending ? "Loading historical headlines…" : newsHistory.isError || (newsHistory.data?.failedWindows ?? 0) > 0 ? "Headlines unavailable for this day; archive coverage is incomplete." : selRow.date < (newsHistory.data?.startDate ?? "") ? "This day is outside the 30-calendar-day news archive." : "No Bitcoin headlines returned for this day."}</li>}
+          </ul>
+        </div>
+      )}
+  </>);
+  if (view === "events") return (
+    <div className="panel min-h-0 flex-1 overflow-y-auto p-4">
+      <h2 className="mb-1 font-display text-sm font-semibold tracking-wide text-foreground">Event study</h2>
+      <p className="mb-3 text-[10px] text-muted-foreground">Source: {source} · checked {updated}</p>
+      {live ? <EventStudy days={days} excluded={hist.data?.incompleteDates ?? []} onPick={setSel} /> : <p className="text-[11px] text-muted-foreground">{hist.isPending ? "Loading ETF flows…" : "No ETF flow data available."} <button className="underline" onClick={onConfigure}>Settings</button></p>}
+      {selRow ? dayCard : live && <p className="text-[10px] text-muted-foreground">Pick an event to see that day's flow, BTC move and headlines.</p>}
+    </div>
+  );
   return (
     <div className="panel min-h-0 flex-1 overflow-y-auto p-4">
       <div className="mb-1 flex items-baseline justify-between">
@@ -163,8 +187,6 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
       </div>
       <p className="mb-4 text-[9px] text-muted-foreground">Conflict day: daily ETF net flow beyond ±$5M and keyword news sentiment point opposite ways. Winner = side whose direction matches the compounded BTC return over the next 1–3 reported days. Small sample, keyword sentiment and holdings-based flow estimates; descriptive only, not causal or predictive evidence.</p>
 
-      {live && <EventStudy days={days} excluded={hist.data?.incompleteDates ?? []} onPick={setSel} />}
-
       <h3 className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Timeline · flows, price & news</h3>
       <p className="mb-2 text-[10px] text-muted-foreground" aria-live="polite">
         {newsHistory.isPending ? "Loading 30-day news history…" : newsHistory.isError || newsHistory.data?.failedWindows === 5 ? "News archive unavailable · recent headlines only." : <>
@@ -192,20 +214,7 @@ export function EtfDivergence({ onConfigure }: { onConfigure: () => void }) {
       <p className="mb-2 text-[10px] text-muted-foreground">
         Bars = ETF flow · line = BTC % · dots = news tone · <span className="text-conflict">amber ! = news and flows point opposite</span> · red shade = price vs flow. Tap a day.
       </p>
-      {selRow && (
-        <div className="mb-3 rounded-md bg-secondary p-2 text-[11px]">
-          <div className="font-mono text-foreground">{selRow.date}: <span className={selRow.total >= 0 ? "text-bull" : "text-bear"}>{selRow.total >= 0 ? "+" : ""}{selRow.total.toFixed(0)}M</span>
-            {selRow.priceChg != null && <> · BTC <span className={selRow.priceChg >= 0 ? "text-bull" : "text-bear"}>{selRow.priceChg.toFixed(2)}%</span></>}
-            {selRow.conflict && <span className="flag flag-conflict ml-1">news ≠ flow</span>}
-          </div>
-          <ul className="mt-1 space-y-1">
-            {(newsByDay.get(selRow.date)?.items ?? []).slice(0, 5).map((n) => (
-              <li key={n.url}><a href={n.url} target="_blank" rel="noreferrer" className={n.tone === "positive" ? "text-bull" : n.tone === "negative" ? "text-bear" : "text-foreground"}>{n.title}</a></li>
-            ))}
-            {!newsByDay.get(selRow.date) && <li className="text-muted-foreground">{newsHistory.isPending ? "Loading historical headlines…" : newsHistory.isError || (newsHistory.data?.failedWindows ?? 0) > 0 ? "Headlines unavailable for this day; archive coverage is incomplete." : selRow.date < (newsHistory.data?.startDate ?? "") ? "This day is outside the 30-calendar-day news archive." : "No Bitcoin headlines returned for this day."}</li>}
-          </ul>
-        </div>
-      )}
+      {dayCard}
 
       <div className="mb-3 rounded-md bg-secondary p-3">
         <div className="font-mono text-xs text-foreground">

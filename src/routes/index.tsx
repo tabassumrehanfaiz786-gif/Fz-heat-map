@@ -55,6 +55,7 @@ function Index() {
             <TabsList className="w-full">
               <TabsTrigger value="news" className="flex-1">News</TabsTrigger>
               <TabsTrigger value="flows" className="flex-1">Flows 30D</TabsTrigger>
+              <TabsTrigger value="events" className="flex-1">Events</TabsTrigger>
               <TabsTrigger value="calendar" className="flex-1">Calendar</TabsTrigger>
               <TabsTrigger value="algo" className="flex-1">Algo</TabsTrigger>
                <TabsTrigger value="vaults" className="flex-1">Chain</TabsTrigger>
@@ -64,6 +65,9 @@ function Index() {
             </TabsContent>
             <TabsContent value="flows" className="flex min-h-0 flex-1 flex-col">
               <EtfDivergence onConfigure={() => setOpen(true)} />
+            </TabsContent>
+            <TabsContent value="events" className="flex min-h-0 flex-1 flex-col">
+              <EtfDivergence view="events" onConfigure={() => setOpen(true)} />
             </TabsContent>
             <TabsContent value="calendar" className="flex min-h-0 flex-1 flex-col">
               <MacroCalendar />
