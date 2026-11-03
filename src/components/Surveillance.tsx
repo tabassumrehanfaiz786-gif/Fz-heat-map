@@ -14,10 +14,28 @@ export function Surveillance() {
   const asks = useRef(new Map<number, number>());
 
   useEffect(() => {
-    const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/btcusdt@depth20@100ms");
-    ws.onopen = () => setStatus("live");
-    ws.onclose = () => setStatus("disconnected");
-    ws.onmessage = (m) => {
+    const URLS = [
+      "wss://data-stream.binance.vision/stream?streams=btcusdt@aggTrade/btcusdt@depth20@100ms",
+      "wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/btcusdt@depth20@100ms",
+      "wss://stream.binance.com:443/stream?streams=btcusdt@aggTrade/btcusdt@depth20@100ms",
+    ];
+    let ws: WebSocket | null = null;
+    let alive = true, attempt = 0, retry: ReturnType<typeof setTimeout> | undefined;
+    const connect = () => {
+      if (!alive) return;
+      const sock = new WebSocket(URLS[attempt % URLS.length]!);
+      ws = sock;
+      sock.onopen = () => { attempt = 0; setStatus("live"); };
+      sock.onclose = () => {
+        if (!alive) return;
+        attempt++;
+        setStatus("reconnecting");
+        retry = setTimeout(connect, Math.min(15000, 1000 * 2 ** Math.min(attempt, 4)));
+      };
+      sock.onerror = () => sock.close();
+      sock.onmessage = onMsg;
+    };
+    const onMsg = (m: MessageEvent) => {
       const { stream, data } = JSON.parse(m.data);
       if (stream.endsWith("aggTrade")) {
         const t: Trade = { price: +data.p, qty: +data.q, time: data.T, side: data.m ? "sell" : "buy" };
@@ -38,7 +56,11 @@ export function Surveillance() {
       setIce(det.current.events(Date.now()).slice(0, 20));
       setTwap(detectTwap(trades.current.filter((t) => t.qty >= 0.05)).slice(0, 10));
     }, 2000);
-    return () => { clearInterval(id); ws.close(); };
+    connect();
+    const wake = () => { if (document.visibilityState === "visible" && ws && ws.readyState > 1) { clearTimeout(retry); attempt = 0; connect(); } };
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("online", wake);
+    return () => { alive = false; clearTimeout(retry); clearInterval(id); document.removeEventListener("visibilitychange", wake); window.removeEventListener("online", wake); ws?.close(); };
   }, []);
 
   const asym = liquidityAsymmetry(ice);
