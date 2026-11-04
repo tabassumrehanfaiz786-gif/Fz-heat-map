@@ -16,8 +16,9 @@ export function flowMarkers(days: FlowDay[], candles: Candle[], issuer: string, 
     for (let i = candles.length - 1; i >= 0; i--) if (candles[i]!.t <= ts + 86_399_999) { idx = i; break; }
     if (idx < 0) continue;
     const c = candles[idx]!;
-    // intraday candles: only mark if the candle is on that day
-    if (candles.length > 1 && idx === candles.length - 1 && ts > c.t + 86_400_000) continue;
+    const interval = candles.length > 1 ? candles[1]!.t - candles[0]!.t : 7 * 86_400_000;
+    if (idx === candles.length - 1 && ts >= c.t + Math.max(interval, 86_400_000) && interval >= 86_400_000) continue;
+    if (interval < 86_400_000 && c.t < ts) continue; // intraday: candle must fall on that day
     out.push({ date: d.date, candleTime: c.t, value, issuer, side: value > 0 ? "in" : "out" });
   }
   return out;
