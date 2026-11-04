@@ -8,6 +8,7 @@ import { EtfDivergence } from "@/components/EtfDivergence";
 import { MacroCalendar } from "@/components/MacroCalendar";
 import { Surveillance } from "@/components/Surveillance";
 import { MempoolRadar } from "@/components/MempoolRadar";
+import { CandleLab } from "@/components/CandleLab";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -45,9 +46,22 @@ function Index() {
       </header>
       <div className="grid gap-3 lg:h-[calc(100vh-4.5rem)] lg:grid-cols-[1fr_360px]">
         <main className="min-h-[640px] lg:min-h-0">
-          <ClientOnly fallback={<div className="panel h-full" />}>
-            <LiveMarket tf={tf} />
-          </ClientOnly>
+          <Tabs defaultValue="heatmap" className="flex h-full min-h-[640px] flex-col lg:min-h-0">
+            <TabsList className="w-fit">
+              <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
+              <TabsTrigger value="candles">Candles + ETF</TabsTrigger>
+            </TabsList>
+            <TabsContent value="heatmap" className="min-h-0 flex-1">
+              <ClientOnly fallback={<div className="panel h-full" />}>
+                <LiveMarket tf={tf} />
+              </ClientOnly>
+            </TabsContent>
+            <TabsContent value="candles" className="min-h-0 flex-1">
+              <ClientOnly fallback={<div className="panel h-full" />}>
+                <CandleLab />
+              </ClientOnly>
+            </TabsContent>
+          </Tabs>
         </main>
         <aside className="flex min-h-[600px] flex-col gap-3 lg:min-h-0">
           <EtfFlows onConfigure={() => setOpen(true)} />
