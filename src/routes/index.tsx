@@ -37,15 +37,15 @@ function Index() {
       <header className="mb-3 flex flex-wrap items-center gap-3">
         <div className="logo-mark" />
         <h1 className="font-display text-xl font-bold tracking-tight">Fz <span className="text-primary">Heatmap</span></h1>
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex max-w-full items-center gap-1 overflow-x-auto">
           {TFS.map((t) => (
             <button key={t} className={`btn-chip ${tf === t ? "btn-chip-active" : ""}`} onClick={() => setTf(t)}>{t}</button>
           ))}
           <button className="btn-chip ml-2" aria-label="Settings" onClick={() => setOpen(true)}><Settings2 className="h-4 w-4" /></button>
         </div>
       </header>
-      <div className="grid gap-3 lg:h-[calc(100vh-4.5rem)] lg:grid-cols-[1fr_360px]">
-        <main className="min-h-[640px] lg:min-h-0">
+      <div className="grid grid-cols-1 gap-3 lg:h-[calc(100vh-4.5rem)] lg:grid-cols-[minmax(0,1fr)_360px]">
+        <main className="min-w-0 min-h-[640px] lg:min-h-0">
           <Tabs defaultValue="heatmap" className="flex h-full min-h-[640px] flex-col lg:min-h-0">
             <TabsList className="w-fit">
               <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
@@ -66,7 +66,7 @@ function Index() {
         <aside className="flex min-h-[600px] flex-col gap-3 lg:min-h-0">
           <EtfFlows onConfigure={() => setOpen(true)} />
           <Tabs defaultValue="news" className="flex min-h-0 flex-1 flex-col">
-            <TabsList className="w-full">
+            <TabsList className="w-full justify-start overflow-x-auto">
               <TabsTrigger value="news" className="flex-1">News</TabsTrigger>
               <TabsTrigger value="flows" className="flex-1">Flows 30D</TabsTrigger>
               <TabsTrigger value="events" className="flex-1">Events</TabsTrigger>
