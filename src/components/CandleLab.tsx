@@ -16,16 +16,35 @@ function useCandles(interval: Interval) {
   useEffect(() => {
     let dead = false;
     setCandles([]);
-    fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${interval}&limit=1000`)
-      .then((r) => r.json())
-      .then((rows: (string | number)[][]) => {
-        if (dead || !Array.isArray(rows)) return;
-        setCandles(rows.map((k) => ({ t: Number(k[0]), o: +k[1]!, h: +k[2]!, l: +k[3]!, c: +k[4]!, v: +k[5]! })));
-      }).catch(() => {});
-    const ws = new WebSocket(`wss://stream.binance.com:9443/ws/btcusdt@kline_${interval}`);
-    ws.onopen = () => setLive(true);
-    ws.onclose = () => setLive(false);
-    ws.onmessage = (e) => {
+    const binance = async (host: string) => {
+      const r = await fetch(`${host}/api/v3/klines?symbol=BTCUSDT&interval=${interval}&limit=1000`);
+      const rows: (string | number)[][] = await r.json();
+      if (!Array.isArray(rows) || !rows.length) throw new Error("empty");
+      return rows.map((k) => ({ t: Number(k[0]), o: +k[1]!, h: +k[2]!, l: +k[3]!, c: +k[4]!, v: +k[5]! }));
+    };
+    const coinbase = async () => {
+      const g: Record<string, number> = { "1m": 60, "5m": 300, "15m": 900, "1h": 3600, "1d": 86400 };
+      const gran = g[interval]; if (!gran) throw new Error("unsupported");
+      const r = await fetch(`https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=${gran}`);
+      const rows: number[][] = await r.json();
+      if (!Array.isArray(rows) || !rows.length) throw new Error("empty");
+      return rows.map((k) => ({ t: k[0]! * 1000, l: k[1]!, h: k[2]!, o: k[3]!, c: k[4]!, v: k[5]! })).reverse();
+    };
+    (async () => {
+      for (const src of [() => binance("https://data-api.binance.vision"), () => binance("https://api.binance.com"), () => binance("https://api.binance.us"), coinbase]) {
+        try { const c = await src(); if (!dead) setCandles(c); return; } catch { /* try next */ }
+      }
+    })();
+    let ws: WebSocket;
+    let tries = 0; let retry: ReturnType<typeof setTimeout> | undefined;
+    const hosts = ["wss://data-stream.binance.vision/ws", "wss://stream.binance.com:9443/ws"];
+    const connect = () => {
+      ws = new WebSocket(`${hosts[tries++ % hosts.length]}/btcusdt@kline_${interval}`);
+      ws.onopen = () => setLive(true);
+      ws.onclose = () => { setLive(false); if (!dead) retry = setTimeout(connect, 3000); };
+      ws.onmessage = onMsg;
+    };
+    const onMsg = (e: MessageEvent) => {
       const k = JSON.parse(e.data).k;
       if (!k) return;
       const c: Candle = { t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c, v: +k.v };
@@ -37,7 +56,8 @@ function useCandles(interval: Interval) {
         return prev;
       });
     };
-    return () => { dead = true; ws.close(); };
+    connect();
+    return () => { dead = true; clearTimeout(retry); ws.close(); };
   }, [interval]);
   return { candles, live };
 }
@@ -85,7 +105,7 @@ function useCoinbaseWalls(minBtc: number, maxBtc: number) {
 export function CandleLab() {
   const [interval, setIntervalTf] = useState<Interval>("1d");
   const [issuer, setIssuer] = useState("IBIT");
-  const [threshold, setThreshold] = useState(300);
+  const [threshold, setThreshold] = useState(100);
   const [minBtc, setMinBtc] = useState(10);
   const [maxBtc, setMaxBtc] = useState(100_000);
   const { candles, live } = useCandles(interval);
@@ -236,15 +256,16 @@ export function CandleLab() {
           <button className="btn-chip" onClick={() => setView({ s: 0, e: n })}>All</button>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-xs">
+      <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 text-xs sm:flex-wrap">
         <span className="text-muted-foreground">ETF marks:</span>
         <select className="rounded border border-border bg-background px-1 py-0.5" value={issuer} onChange={(e) => setIssuer(e.target.value)}>
           {ISSUERS.map((i) => <option key={i} value={i}>{i === "TOTAL" ? "All issuers (net)" : `${issuerName(i)} (${i})`}</option>)}
         </select>
-        {[100, 300, 500].map((t) => <button key={t} className={`btn-chip ${threshold === t ? "btn-chip-active" : ""}`} onClick={() => setThreshold(t)}>±${t}M</button>)}
+        {[0, 50, 100, 300, 500].map((t) => <button key={t} className={`btn-chip ${threshold === t ? "btn-chip-active" : ""}`} onClick={() => setThreshold(t)}>{t === 0 ? "All" : `±$${t}M`}</button>)}
+        {!["1d", "1w", "1M"].includes(interval) && <span className="text-muted-foreground">ETF flows are daily — use 1d/1w to see marks</span>}
         <span className="text-muted-foreground">{markers.length} marked · {etf.data?.coverageDays ?? days.length} reported days from {etf.data?.provider ?? "provider"}</span>
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-xs">
+      <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 text-xs sm:flex-wrap">
         <span className="text-muted-foreground">Coinbase passive orders <span className={status === "live" ? "text-bull" : ""}>● {status}</span> min:</span>
         {MIN_PRESETS.map((t) => <button key={t} className={`btn-chip ${minBtc === t ? "btn-chip-active" : ""}`} onClick={() => setMinBtc(t)}>{t}₿</button>)}
         <span className="text-muted-foreground">max:</span>
