@@ -256,7 +256,7 @@ export function CandleLab() {
           <button className="btn-chip" onClick={() => setView({ s: 0, e: n })}>All</button>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-xs">
+      <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 text-xs sm:flex-wrap">
         <span className="text-muted-foreground">ETF marks:</span>
         <select className="rounded border border-border bg-background px-1 py-0.5" value={issuer} onChange={(e) => setIssuer(e.target.value)}>
           {ISSUERS.map((i) => <option key={i} value={i}>{i === "TOTAL" ? "All issuers (net)" : `${issuerName(i)} (${i})`}</option>)}
@@ -265,7 +265,7 @@ export function CandleLab() {
         {!["1d", "1w", "1M"].includes(interval) && <span className="text-muted-foreground">ETF flows are daily — use 1d/1w to see marks</span>}
         <span className="text-muted-foreground">{markers.length} marked · {etf.data?.coverageDays ?? days.length} reported days from {etf.data?.provider ?? "provider"}</span>
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-xs">
+      <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 text-xs sm:flex-wrap">
         <span className="text-muted-foreground">Coinbase passive orders <span className={status === "live" ? "text-bull" : ""}>● {status}</span> min:</span>
         {MIN_PRESETS.map((t) => <button key={t} className={`btn-chip ${minBtc === t ? "btn-chip-active" : ""}`} onClick={() => setMinBtc(t)}>{t}₿</button>)}
         <span className="text-muted-foreground">max:</span>
