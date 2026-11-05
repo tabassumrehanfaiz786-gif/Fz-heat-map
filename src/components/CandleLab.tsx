@@ -243,11 +243,11 @@ export function CandleLab() {
   const zoomBtn = (k: number) => { const mid = (v.s + v.e) / 2, span = (v.e - v.s) * k; setView(clampView(mid - span / 2, mid + span / 2)); };
 
   return (
-    <div className="panel flex h-full min-h-0 flex-col gap-2 p-3">
-      <div className="flex flex-wrap items-center gap-1 text-xs">
+    <div className="panel flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-hidden p-2 sm:p-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-1 text-xs">
         <span className="font-display font-semibold">BTCUSDT candles</span>
         <span className={live ? "text-bull" : "text-muted-foreground"}>● {live ? "live" : "connecting"}</span>
-        <div className="ml-2 flex flex-wrap gap-1">
+        <div className="order-last flex w-full gap-1 overflow-x-auto pb-1 sm:order-none sm:ml-2 sm:w-auto sm:flex-wrap">
           {INTERVALS.map((t) => <button key={t} className={`btn-chip ${interval === t ? "btn-chip-active" : ""}`} onClick={() => setIntervalTf(t)}>{t}</button>)}
         </div>
         <div className="ml-auto flex gap-1">
@@ -271,8 +271,8 @@ export function CandleLab() {
         <span className="text-muted-foreground">max:</span>
         {MAX_PRESETS.map((t) => <button key={t} className={`btn-chip ${maxBtc === t ? "btn-chip-active" : ""}`} onClick={() => setMaxBtc(t)}>{t.toLocaleString()}₿</button>)}
       </div>
-      <div className="grid min-h-0 flex-1 gap-2 lg:grid-cols-[1fr_220px]">
-        <div ref={wrapRef} className="relative min-h-[380px] cursor-crosshair touch-none select-none overflow-hidden rounded border border-border"
+      <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_220px]">
+        <div ref={wrapRef} className="relative h-[360px] min-w-0 sm:h-auto sm:min-h-[380px] cursor-crosshair touch-none select-none overflow-hidden rounded border border-border"
           onPointerDown={(e) => { drag.current = { x: e.clientX, s: v.s, e: v.e }; (e.target as HTMLElement).setPointerCapture(e.pointerId); }}
           onPointerMove={(e) => {
             const r = wrapRef.current!.getBoundingClientRect();
@@ -289,7 +289,7 @@ export function CandleLab() {
             </div>
           )}
         </div>
-        <div className="flex min-h-0 flex-col overflow-hidden rounded border border-border text-[11px]">
+        <div className="flex max-h-48 min-h-0 flex-col overflow-hidden rounded border border-border text-[11px] lg:max-h-none">
           <p className="border-b border-border px-2 py-1 font-semibold">Passive order log</p>
           <ul className="min-h-0 flex-1 overflow-auto">
             {events.length === 0 && <li className="px-2 py-1 text-muted-foreground">Waiting for walls in your size range…</li>}
