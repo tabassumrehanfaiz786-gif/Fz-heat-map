@@ -66,7 +66,7 @@ function Index() {
         <aside className="flex min-h-[600px] flex-col gap-3 lg:min-h-0">
           <EtfFlows onConfigure={() => setOpen(true)} />
           <Tabs defaultValue="news" className="flex min-h-0 flex-1 flex-col">
-            <TabsList className="w-full">
+            <TabsList className="w-full justify-start overflow-x-auto">
               <TabsTrigger value="news" className="flex-1">News</TabsTrigger>
               <TabsTrigger value="flows" className="flex-1">Flows 30D</TabsTrigger>
               <TabsTrigger value="events" className="flex-1">Events</TabsTrigger>
