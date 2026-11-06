@@ -10,6 +10,7 @@ import { Surveillance } from "@/components/Surveillance";
 import { MempoolRadar } from "@/components/MempoolRadar";
 import { CandleLab } from "@/components/CandleLab";
 import { EtfInav } from "@/components/EtfInav";
+import { ConsolidatedTape } from "@/components/ConsolidatedTape";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -75,6 +76,7 @@ function Index() {
               <TabsTrigger value="algo" className="flex-1">Algo</TabsTrigger>
                <TabsTrigger value="vaults" className="flex-1">Chain</TabsTrigger>
               <TabsTrigger value="inav" className="flex-1">iNAV</TabsTrigger>
+              <TabsTrigger value="nbbo" className="flex-1">NBBO</TabsTrigger>
             </TabsList>
             <TabsContent value="news" className="flex min-h-0 flex-1 flex-col">
               <Suspense fallback={<div className="panel flex-1" />}><NewsFeed /></Suspense>
@@ -96,6 +98,9 @@ function Index() {
             </TabsContent>
             <TabsContent value="inav" className="flex min-h-0 flex-1 flex-col">
               <EtfInav />
+            </TabsContent>
+            <TabsContent value="nbbo" className="flex min-h-0 flex-1 flex-col">
+              <ConsolidatedTape />
             </TabsContent>
           </Tabs>
         </aside>
