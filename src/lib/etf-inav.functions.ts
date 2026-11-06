@@ -24,9 +24,9 @@ export const getEtfInav = createServerFn({ method: "GET" }).handler(async (): Pr
         // previous session close: last daily bar before the current session's day
         const curDay = new Date(m.regularMarketTime * 1000).toISOString().slice(0, 10);
         let idx = -1;
-        for (let i = t.length - 1; i >= 0; i--) if (new Date(t[i]! * 1000).toISOString().slice(0, 10) < curDay && closes[i]) { idx = i; break; }
+        for (let i = t.length - 1; i >= 0; i--) if (new Date(t[i]! * 1000).toISOString().slice(0, 10)! < curDay && closes[i]) { idx = i; break; }
         if (idx < 0) return null;
-        const d = new Date(t[idx]! * 1000).toISOString().slice(0, 10);
+        const d = String(new Date((t[idx] ?? 0) * 1000).toISOString()).slice(0, 10);
         // 4pm ET close ≈ 21:00 UTC (20:00 in summer); use 20:55 UTC as compromise
         const prevCloseTime = Math.floor(Date.parse(`${d}T20:55:00Z`) / 1000);
         const q: EtfQuote = { ticker: tk, price: m.regularMarketPrice, time: m.regularMarketTime, prevClose: closes[idx] as number, prevCloseTime };
