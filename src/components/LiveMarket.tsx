@@ -138,7 +138,7 @@ export function LiveMarket({ tf }: { tf: TF }) {
           const msg = `Large ${big.side}: ${big.q.toFixed(2)} BTC @ ${col.vwap.toFixed(1)}`;
           (big.side === "buy" ? toast.success : toast.error)(msg, { description: `≈ $${((big.q * col.vwap) / 1e6).toFixed(2)}M in 1 second` });
           if (cfg.alertSound) beep(big.side === "buy");
-          if (cfg.alertNotify && "Notification" in window && Notification.permission === "granted") new Notification("Fz Heatmap", { body: msg });
+          if (cfg.alertNotify && "Notification" in window && Notification.permission === "granted") new Notification("Fz Heatmap & Newsflow", { body: msg });
         }
       }
       if (s.cur.last) setPrice(s.cur.last);

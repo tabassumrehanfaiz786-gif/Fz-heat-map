@@ -19,7 +19,7 @@ export async function exportDivergencePdf(opts: {
   };
   const GREEN: [number, number, number] = [22, 150, 70], RED: [number, number, number] = [200, 40, 40], GREY: [number, number, number] = [110, 110, 110];
 
-  text("Fz Heatmap — 30-day ETF flow & news divergence report", 16, true);
+  text("Fz Heatmap & Newsflow — 30-day ETF flow & news divergence report", 16, true);
   text(`Source: ${opts.source} · Data updated: ${opts.updated} · Generated: ${new Date().toUTCString()}`, 8, false, GREY);
   if (opts.disclosure) text(opts.disclosure, 8, false, GREY);
   y += 8;

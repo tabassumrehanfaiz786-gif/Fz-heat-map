@@ -17,9 +17,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Fz Heatmap — Live BTCUSDT order flow" },
+      { title: "Fz Heatmap & Newsflow — Live BTC order flow & news" },
       { name: "description", content: "Live BTCUSDT order book heatmap, big-order walls, bubble candles, ETF flows, AI news impact and macro calendar." },
-      { property: "og:title", content: "Fz Heatmap — Live BTCUSDT order flow" },
+      { property: "og:title", content: "Fz Heatmap & Newsflow — Live BTC order flow & news" },
       { property: "og:description", content: "Live BTCUSDT heatmap, ETF flows, AI news impact and macro calendar." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -38,7 +38,7 @@ function Index() {
     <div className="min-h-screen bg-background p-3 text-foreground lg:h-screen lg:overflow-hidden">
       <header className="mb-3 flex flex-wrap items-center gap-3">
         <div className="logo-mark" />
-        <h1 className="font-display text-xl font-bold tracking-tight">Fz <span className="text-primary">Heatmap</span></h1>
+        <h1 className="font-display text-xl font-bold tracking-tight">Fz <span className="text-primary">Heatmap</span> &amp; Newsflow</h1>
         <div className="ml-auto flex max-w-full items-center gap-1 overflow-x-auto">
           {TFS.map((t) => (
             <button key={t} className={`btn-chip ${tf === t ? "btn-chip-active" : ""}`} onClick={() => setTf(t)}>{t}</button>
