@@ -44,7 +44,7 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display">Fz Heatmap settings</DialogTitle>
+          <DialogTitle className="font-display">Fz Heatmap &amp; Newsflow settings</DialogTitle>
           <DialogDescription>Data providers, big-order alerts and wall detection.</DialogDescription>
         </DialogHeader>
 
