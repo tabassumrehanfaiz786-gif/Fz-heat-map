@@ -3,7 +3,7 @@
 
 **Live Research Platform:** [https://fz-heatmap-news-flow.lovable.app](https://fz-heatmap-news-flow.lovable.app)  
 **Author:** Faizan Rehan (Advocate and Independent Legal & Financial Markets Researcher)  
-**Contact:** [faizanrehan.law@gmail.com](mailto:faizanrehan.law@gmail.com) *(or your preferred Gmail)*  
+**Contact:** [faizanrehan.law@gmail.com](mailto:faizan.tabassumrehan@gmail.com) *(or your preferred Gmail)*  
 **Primary Working Paper (SSRN):** [The Hierarchy of Liquidity Magnets (SSRN 7572258)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7572258)  
 **Research Focus:** UK Financial Regulation, UK MAR (Regulation (EU) 596/2014), Limit Order Book Microstructure & RegTech Surveillance
 
